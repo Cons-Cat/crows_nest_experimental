@@ -1,0 +1,7 @@
+---
+Checks:          'bugprone-*,cppcoreguidelines-*,google-*,performance-*,misc-*,modernize-*,readability-*,-cppcoreguidelines-macro-usage,-cppcoreguidelines-avoid-magic-numbers,-readability-magic-numbers,-readability-uppercase-literal-suffix,-modernize-use-auto,-cppcoreguidelines-pro-type-union-access,-google-readability-todo'
+WarningsAsErrors: ''
+HeaderFilterRegex: ^src
+AnalyzeTemporaryDtors: false
+FormatStyle:     file
+...
