@@ -12,6 +12,7 @@ struct game {
   vk::SurfaceKHR vk_surface;
 
   void initialize();
+  void loop();
   void destroy();
 };
 

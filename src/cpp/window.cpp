@@ -1,5 +1,6 @@
 #include "window.hpp"
 
+#include <SDL.h>
 #include <exception>
 #include <iostream>
 #include <stdexcept>
@@ -49,10 +50,22 @@ void game::initialize() {
   }
 }
 
+void game::loop() {
+  while (true) {
+    SDL_Event event;
+    if (SDL_PollEvent(&event)) {
+      if (event.type == SDL_QUIT) {
+        break;
+      }
+    }
+  }
+}
+
 // NOLINTNEXTLINE
 void game::destroy() {
   this->vk_instance.destroy();
   SDL_DestroyWindow(this->window);
+  SDL_Quit();
 }
 
 }  // namespace crow
