@@ -62,6 +62,7 @@ void game::loop() {
 
 // NOLINTNEXTLINE
 void game::destroy() {
+    this->vk_instance.destroySurfaceKHR(this->vk_surface);
     this->vk_instance.destroy();
     SDL_DestroyWindow(this->p_window);
     SDL_Quit();
