@@ -7,6 +7,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 project(crows_nest CXX)
 add_compile_definitions(CMAKE_GAME_TITLE="Crow's Nest")
+# TODO: Make CMAKE_DEBUG easily configurable.
+# if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+add_compile_definitions(CMAKE_DEBUG)
+# endif()
 
 find_package(Vulkan REQUIRED FATAL_ERROR)
 find_package(SDL2 REQUIRED FATAL_ERROR)

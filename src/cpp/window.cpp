@@ -16,19 +16,27 @@ namespace crow {
 
 void game::initialize() {
     try {
-        window = SDL_CreateWindow(CMAKE_GAME_TITLE, SDL_WINDOWPOS_CENTERED,
-                                  SDL_WINDOWPOS_CENTERED, 1280, 720,
-                                  SDL_WINDOW_VULKAN);
-        if (window == nullptr) {
+        p_window = SDL_CreateWindow(CMAKE_GAME_TITLE, SDL_WINDOWPOS_CENTERED,
+                                    SDL_WINDOWPOS_CENTERED, 1280, 720,
+                                    SDL_WINDOW_VULKAN);
+        if (p_window == nullptr) {
             throw "Failed to create SDL2 window.";
         }
-        crow::make_vk_features();  // This mutates global::device_features
-        this->vk_features = global::device_features.features_basic;
-        vk::InstanceCreateInfo info = crow::make_vk_create_info(window);
-        this->vk_instance = vk::createInstance(info);
+        // crow::make_vk_features();  // This mutates global::device_features
+        // this->vk_features = global::device_features.features_basic;
+        vk::ApplicationInfo app_info(CMAKE_GAME_TITLE, 0,
+                                     "2108_GDBS_LogicVisions_GameEngine", 0,
+                                     VK_API_VERSION_1_2);
+        std::vector<char const*> extension_names =
+            crow::make_vk_extensions(p_window);
+        std::vector<char const*> layer_names = crow::make_vk_layer_names();
+        vk::InstanceCreateInfo instance_info = crow::make_vk_instance_info(
+            &extension_names, &layer_names, &app_info);
+        this->vk_instance = vk::createInstance(instance_info);
+        // this->vk_device = vk_instance.enumeratePhysicalDevices().front();
 
         SDL_Vulkan_CreateSurface(
-            this->window, static_cast<VkInstance>(this->vk_instance),
+            this->p_window, static_cast<VkInstance>(this->vk_instance),
             reinterpret_cast<VkSurfaceKHR*>(&this->vk_surface));
         if (!this->vk_surface) {
             throw "Failed to create an SDL2 Vulkan surface.";
@@ -55,7 +63,7 @@ void game::loop() {
 // NOLINTNEXTLINE
 void game::destroy() {
     this->vk_instance.destroy();
-    SDL_DestroyWindow(this->window);
+    SDL_DestroyWindow(this->p_window);
     SDL_Quit();
 }
 

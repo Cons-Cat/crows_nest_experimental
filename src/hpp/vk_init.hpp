@@ -8,25 +8,27 @@
 
 namespace crow {
 
-inline auto make_vk_extensions(SDL_Window* window) -> std::vector<const char*> {
+inline auto make_vk_extensions(SDL_Window* p_window)
+    -> std::vector<char const*> {
     uint32_t extension_count = 0;
-    SDL_Vulkan_GetInstanceExtensions(window, &extension_count, nullptr);
-    std::vector<const char*> extension_names(extension_count);
-    SDL_Vulkan_GetInstanceExtensions(window, &extension_count,
+    SDL_Vulkan_GetInstanceExtensions(p_window, &extension_count, nullptr);
+    std::vector<char const*> extension_names(extension_count);
+    SDL_Vulkan_GetInstanceExtensions(p_window, &extension_count,
                                      extension_names.data());
-    extension_names.insert(extension_names.end(),
-                           {
-                               VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
-                               VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
-                               VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
-                               VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
-                               VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
-                               VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME,
-                               VK_KHR_SPIRV_1_4_EXTENSION_NAME,
-                               VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME,
-                               VK_EXT_SCALAR_BLOCK_LAYOUT_EXTENSION_NAME,
-                           });
+    // extension_names.insert(extension_names.end(),
+    //                        {
+    //                            VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+    //                            VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+    //                            VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+    //                            VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
+    //                            VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+    //                            VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME,
+    //                            VK_KHR_SPIRV_1_4_EXTENSION_NAME,
+    //                            VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME,
+    //                            VK_EXT_SCALAR_BLOCK_LAYOUT_EXTENSION_NAME,
+    //                        });
     return extension_names;
+    int exension_name = 0;
 }
 
 inline auto make_vk_features() {
@@ -97,29 +99,25 @@ inline auto make_vk_features() {
 
 inline auto make_vk_layer_names() -> std::vector<char const*> {
     std::vector<const char*> layer_names{
-#ifdef DEBUG
-        "VK_LAYER_LUNARG_standard_validation",
+#ifdef CMAKE_DEBUG
+        "VK_LAYER_KHRONOS_validation",
 #endif
     };
     return layer_names;
 }
 
-inline auto make_vk_create_info(SDL_Window* window) -> vk::InstanceCreateInfo {
-    std::vector<const char*> extension_names = crow::make_vk_extensions(window);
-    std::vector<const char*> layer_names = crow::make_vk_layer_names();
-
-    vk::ApplicationInfo app_info(CMAKE_GAME_TITLE, 0,
-                                 "2108_GDBS_LogicVisions_GameEngine", 0,
-                                 VK_API_VERSION_1_2);
-
-    vk::InstanceCreateInfo info{};
-    info.sType = vk::StructureType::eInstanceCreateInfo;
-    info.pApplicationInfo = &app_info;
-    info.enabledLayerCount = layer_names.size();
-    info.ppEnabledLayerNames = layer_names.data();
-    info.enabledExtensionCount = extension_names.size();
-    info.ppEnabledExtensionNames = extension_names.data();
-    return info;
+inline auto make_vk_instance_info(
+    std::vector<char const*> const* p_extension_names,
+    std::vector<char const*> const* p_layer_names,
+    vk::ApplicationInfo const* p_app_info) -> vk::InstanceCreateInfo {
+    vk::InstanceCreateInfo instance_info{};
+    instance_info.sType = vk::StructureType::eInstanceCreateInfo;
+    instance_info.pApplicationInfo = p_app_info;
+    instance_info.enabledLayerCount = p_layer_names->size();
+    instance_info.ppEnabledLayerNames = p_layer_names->data();
+    instance_info.enabledExtensionCount = p_extension_names->size();
+    instance_info.ppEnabledExtensionNames = p_extension_names->data();
+    return instance_info;
 }
 
 }  // namespace crow
