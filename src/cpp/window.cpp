@@ -20,7 +20,6 @@ void game::initialize() {
     std::vector<const char*> extension_names(extension_count);
     SDL_Vulkan_GetInstanceExtensions(window, &extension_count,
                                      extension_names.data());
-    // TODO: Set application version and engine version here via CMake.
     vk::ApplicationInfo app_info(CMAKE_GAME_TITLE, 0, "", 0,
                                  VK_API_VERSION_1_2);
     std::vector<const char*> layer_names{
@@ -43,9 +42,9 @@ void game::initialize() {
     if (!this->vk_surface) {
       throw "Failed to create an SDL2 Vulkan surface.";
     }
-  } catch (...) {
+  } catch (std::exception& e) {
     // TODO: Set up fmt::
-    // std::cerr << std::current_exception() << "\n";
+    std::cerr << e.what() << "\n";
     throw;
   }
 }
