@@ -3,6 +3,8 @@
 
 #include <SDL.h>
 #include <SDL_vulkan.h>
+#include <assert.h>
+#include <optional>
 
 #include "vk_globals.hpp"
 
@@ -118,6 +120,62 @@ inline auto make_vk_instance_info(
     instance_info.enabledExtensionCount = p_extension_names->size();
     instance_info.ppEnabledExtensionNames = p_extension_names->data();
     return instance_info;
+}
+
+inline auto is_device_capable(vk::PhysicalDevice device)
+    -> std::optional<size_t> {
+    vk::PhysicalDeviceProperties2 device_properties = device.getProperties2();
+    vk::PhysicalDeviceFeatures2 device_features = device.getFeatures2();
+    std::vector<vk::QueueFamilyProperties2> queueFamilyProperties =
+        device.getQueueFamilyProperties2();
+
+    // TODO: This might not be reliable.
+    // Find a video card that can support raytracing and blitting.
+    std::vector<vk::QueueFamilyProperties> queue_family_properties =
+        device.getQueueFamilyProperties();
+    auto property_iterator = std::find_if(
+        queue_family_properties.begin(), queue_family_properties.end(),
+        [](vk::QueueFamilyProperties const& qfp) {
+            // return qfp.queueFlags & vk::QueueFlagBits::eCompute;
+            return qfp.queueFlags & vk::QueueFlagBits::eCompute;
+        });
+    size_t compute_queue_family_index =
+        std::distance(queue_family_properties.begin(), property_iterator);
+    if (compute_queue_family_index < queue_family_properties.size()) {
+        return std::optional<size_t>(compute_queue_family_index);
+    }
+    return std::nullopt;
+}
+
+inline auto make_vk_logical_device(vk::Instance* instance) -> vk::Device {
+    // TODO: Check all video cards and find ideal one.
+    vk::PhysicalDevice capable_physical_device = VK_NULL_HANDLE;
+    std::vector<vk::PhysicalDevice> physical_devices =
+        instance->enumeratePhysicalDevices();
+    if (physical_devices.empty()) {
+        throw std::runtime_error("Failed to find a Vulkan-capable GPU.");
+    }
+    size_t compute_queue_family_index = 0;
+    for (auto& device : physical_devices) {
+        std::optional<size_t> maybe_index = is_device_capable(device);
+        if (maybe_index.has_value()) {
+            compute_queue_family_index = maybe_index.value();
+            capable_physical_device = device;
+            break;
+        }
+    }
+    if (!capable_physical_device) {
+        throw std::runtime_error("Failed to find a GPU for raytracing.");
+    }
+
+    float queue_priority = 0.f;
+    vk::DeviceQueueCreateInfo device_queue_create_info(
+        vk::DeviceQueueCreateFlags(),
+        static_cast<uint32_t>(compute_queue_family_index), 1, &queue_priority);
+    vk::Device logical_device =
+        capable_physical_device.createDevice(vk::DeviceCreateInfo(
+            vk::DeviceCreateFlags(), device_queue_create_info));
+    return logical_device;
 }
 
 }  // namespace crow

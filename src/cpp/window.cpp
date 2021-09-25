@@ -20,7 +20,7 @@ void game::initialize() {
                                     SDL_WINDOWPOS_CENTERED, 1280, 720,
                                     SDL_WINDOW_VULKAN);
         if (p_window == nullptr) {
-            throw "Failed to create SDL2 window.";
+            throw std::runtime_error("Failed to create SDL2 window.");
         }
         // crow::make_vk_features();  // This mutates global::device_features
         // this->vk_features = global::device_features.features_basic;
@@ -33,13 +33,14 @@ void game::initialize() {
         vk::InstanceCreateInfo instance_info = crow::make_vk_instance_info(
             &extension_names, &layer_names, &app_info);
         this->vk_instance = vk::createInstance(instance_info);
-        // this->vk_device = vk_instance.enumeratePhysicalDevices().front();
+        this->vk_device = crow::make_vk_logical_device(&vk_instance);
 
         SDL_Vulkan_CreateSurface(
             this->p_window, static_cast<VkInstance>(this->vk_instance),
             reinterpret_cast<VkSurfaceKHR*>(&this->vk_surface));
         if (!this->vk_surface) {
-            throw "Failed to create an SDL2 Vulkan surface.";
+            throw std::runtime_error(
+                "Failed to create an SDL2 Vulkan surface.");
         }
     } catch (std::exception& e) {
         // TODO: Set up fmt::
@@ -48,6 +49,7 @@ void game::initialize() {
     }
 }
 
+// NOLINTNEXTLINE Remove when this function is clearly not static.
 void game::loop() {
     while (true) {
         SDL_Event event;
@@ -60,8 +62,8 @@ void game::loop() {
     crow::render();
 }
 
-// NOLINTNEXTLINE
-void game::destroy() {
+void game::destroy() const {
+    this->vk_device.destroy();
     this->vk_instance.destroySurfaceKHR(this->vk_surface);
     this->vk_instance.destroy();
     SDL_DestroyWindow(this->p_window);
