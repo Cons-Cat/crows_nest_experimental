@@ -10,6 +10,7 @@ struct game {
   SDL_Window* window{};
   vk::Instance vk_instance;
   vk::SurfaceKHR vk_surface;
+  vk::PhysicalDeviceFeatures vk_features;
 
   void initialize();
   void loop();
