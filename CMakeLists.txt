@@ -31,5 +31,8 @@ target_link_libraries(
 
 target_sources(
   crows_nest PRIVATE
+  src/cpp/vk_globals.cpp
   src/cpp/window.cpp
+  src/cpp/vk_init.cpp
+  src/cpp/render_loop.cpp
 )
