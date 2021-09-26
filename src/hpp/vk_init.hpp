@@ -3,7 +3,6 @@
 
 #include <SDL.h>
 #include <SDL_vulkan.h>
-#include <assert.h>
 #include <iostream>
 #include <optional>
 
@@ -129,7 +128,7 @@ inline auto is_device_capable(vk::PhysicalDevice device)
     size_t compute_queue_family_index =
         std::distance(queue_family_properties.begin(), property_iterator);
     if (compute_queue_family_index < queue_family_properties.size()) {
-        return std::optional<size_t>(compute_queue_family_index);
+        return compute_queue_family_index;
     }
     return std::nullopt;
 }
@@ -140,19 +139,17 @@ inline void get_vk_features() {
 }
 
 inline auto make_device_extensions() -> std::vector<char const*> {
-    std::vector<char const*> extension_names;
-    extension_names.insert(extension_names.end(),
-                           {
-                               VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
-                               VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
-                               VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
-                               VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
-                               VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
-                               VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME,
-                               VK_KHR_SPIRV_1_4_EXTENSION_NAME,
-                               VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME,
-                               VK_EXT_SCALAR_BLOCK_LAYOUT_EXTENSION_NAME,
-                           });
+    std::vector<char const*> extension_names{
+        VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+        VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+        VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+        VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
+        VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+        VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME,
+        VK_KHR_SPIRV_1_4_EXTENSION_NAME,
+        VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME,
+        VK_EXT_SCALAR_BLOCK_LAYOUT_EXTENSION_NAME,
+    };
     return extension_names;
 }
 
