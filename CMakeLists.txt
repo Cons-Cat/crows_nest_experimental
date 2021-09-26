@@ -39,4 +39,5 @@ target_sources(
   src/cpp/window.cpp
   src/cpp/vk_init.cpp
   src/cpp/render_loop.cpp
+  src/cpp/swapchain.cpp
 )

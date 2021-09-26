@@ -33,19 +33,24 @@ void game::initialize() {
         vk::InstanceCreateInfo instance_info = crow::make_vk_instance_info(
             &instance_extensions, &instance_layers, &app_info);
         this->vk_instance = vk::createInstance(instance_info);
-        std::vector<const char*> device_extensions =
-            crow::make_vk_device_extensions();
-        this->vk_device =
-            crow::make_vk_logical_device(&vk_instance, device_extensions);
 
         VkSurfaceKHR p_temp_surface = nullptr;
-        // NOLINTNEXTLINE
         if (SDL_Vulkan_CreateSurface(this->p_window,
                                      static_cast<VkInstance>(this->vk_instance),
                                      &p_temp_surface) == SDL_FALSE) {
             throw std::runtime_error(SDL_GetError());
         }
         this->vk_surface = vk::SurfaceKHR(p_temp_surface);
+
+        vk::PhysicalDevice vk_physical_device =
+            crow::find_vk_physical_device(&this->vk_instance);
+        std::vector<const char*> device_extensions =
+            crow::make_vk_device_extensions();
+        auto const& [graphics_queue_index, presentation_queue_index,
+                     compute_queue_index] =
+            crow::make_vk_queue_indices(&vk_physical_device, &this->vk_surface);
+        this->vk_logical_device = crow::make_vk_logical_device(
+            &vk_instance, &this->vk_surface, device_extensions);
     } catch (std::exception& e) {
         // TODO: Set up fmt::
         std::cerr << e.what() << "\n";
@@ -67,7 +72,7 @@ void game::loop() {
 }
 
 void game::destroy() const {
-    this->vk_device.destroy();
+    this->vk_logical_device.destroy();
     this->vk_instance.destroySurfaceKHR(this->vk_surface);
     this->vk_instance.destroy();
     SDL_DestroyWindow(this->p_window);

@@ -10,9 +10,10 @@ struct game {
     // TODO: Move these to private and make getters.
     SDL_Window* p_window{};
     vk::Instance vk_instance;
-    vk::Device vk_device;
+    vk::Device vk_logical_device;
     vk::SurfaceKHR vk_surface;
     vk::PhysicalDeviceFeatures vk_features;
+    vk::SwapchainKHR vk_swapchain;
 
     void initialize();
     void loop();

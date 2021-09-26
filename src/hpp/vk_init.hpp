@@ -10,6 +10,8 @@
 
 namespace crow {
 
+// TODO: Move these into `vk_init.cpp`
+
 inline auto make_vk_instance_extensions(SDL_Window* p_window)
     -> std::vector<char const*> {
     uint32_t extension_count = 0;
@@ -139,6 +141,7 @@ inline void get_vk_features() {
 
 inline auto make_vk_device_extensions() -> std::vector<char const*> {
     std::vector<char const*> extension_names{
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
         VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
         VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
         VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
@@ -152,9 +155,8 @@ inline auto make_vk_device_extensions() -> std::vector<char const*> {
     return extension_names;
 }
 
-inline auto make_vk_logical_device(vk::Instance* p_instance,
-                                   std::vector<char const*>& device_extensions)
-    -> vk::Device {
+inline auto find_vk_physical_device(vk::Instance* p_instance)
+    -> vk::PhysicalDevice {
     // TODO: Check all video cards and find ideal one.
     vk::PhysicalDevice capable_physical_device = VK_NULL_HANDLE;
     std::vector<vk::PhysicalDevice> physical_devices =
@@ -181,23 +183,94 @@ inline auto make_vk_logical_device(vk::Instance* p_instance,
 #ifdef CMAKE_DEBUG
     std::cout << "Selected device: [" << device_index << "]\n";
 #endif
+    return capable_physical_device;
+}
 
-    float queue_priority = 0.f;
-    vk::DeviceQueueCreateInfo device_queue_create_info(
-        vk::DeviceQueueCreateFlags(), compute_queue_family_index, 1,
-        &queue_priority);
-    // vk::PhysicalDeviceFeatures physical_device_features{};
+inline auto find_queue_family_index(
+    std::vector<vk::QueueFamilyProperties> const& queue_family_properties,
+    vk::QueueFlagBits queue_flag) -> uint32_t {
+    // Get the first index into queueFamiliyProperties which supports this flag.
+    std::vector<vk::QueueFamilyProperties>::const_iterator
+        queue_family_property = std::find_if(
+            queue_family_properties.begin(), queue_family_properties.end(),
+            [=](vk::QueueFamilyProperties const& qfp) {
+                return qfp.queueFlags & queue_flag;
+            });
+    // assert(queue_family_property != queueFamilyProperties.end());
+    return static_cast<uint32_t>(
+        std::distance(queue_family_properties.begin(), queue_family_property));
+}
 
-    vk::DeviceCreateInfo device_create_info(
-        vk::DeviceCreateFlags(), device_queue_create_info, {},
-        device_extensions, {}  // &physical_device_features
-    );
-    vk::Device logical_device =
-        capable_physical_device.createDevice(device_create_info);
+inline auto make_vk_queue_indices(vk::PhysicalDevice* p_device,
+                                  vk::SurfaceKHR* p_surface)
+    -> std::tuple<uint32_t,  // Graphics queue family index.
+                  uint32_t,  // Presentation queue family index.
+                  uint32_t>  // Compute queue family index.
+{
+    std::vector<vk::QueueFamilyProperties> queue_family_properties =
+        p_device->getQueueFamilyProperties();
+    auto graphics_queue_family_index = find_queue_family_index(
+        queue_family_properties, vk::QueueFlagBits::eGraphics);
+    auto compute_queue_family_index = find_queue_family_index(
+        queue_family_properties, vk::QueueFlagBits::eCompute);
+
+    uint32_t present_queue_family_index =
+        p_device->getSurfaceSupportKHR(graphics_queue_family_index,
+                                       *p_surface) != 0
+            ? graphics_queue_family_index
+            : queue_family_properties.size();
+    if (present_queue_family_index == queue_family_properties.size()) {
+        // look for another family index that supports both graphics and present
+        for (size_t i = 0; i < queue_family_properties.size(); i++) {
+            if ((queue_family_properties[i].queueFlags &
+                 vk::QueueFlagBits::eGraphics) &&
+                (p_device->getSurfaceSupportKHR(static_cast<uint32_t>(i),
+                                                *p_surface) != 0)) {
+                graphics_queue_family_index = i;
+                present_queue_family_index = i;
+                break;
+            }
+        }
+        if (present_queue_family_index == queue_family_properties.size()) {
+            for (size_t i = 0; i < queue_family_properties.size(); i++) {
+                if (p_device->getSurfaceSupportKHR(static_cast<uint32_t>(i),
+                                                   *p_surface) != 0) {
+                    present_queue_family_index = i;
+                    break;
+                }
+            }
+        }
+    }
+    if ((graphics_queue_family_index == queue_family_properties.size()) ||
+        (present_queue_family_index == queue_family_properties.size())) {
+        throw std::runtime_error(
+            "Could not find a queue for graphics or present -> terminating");
+    }
+
+    return std::make_tuple(present_queue_family_index,
+                           present_queue_family_index,
+                           compute_queue_family_index);
+}
+
+inline auto make_vk_logical_device(vk::Instance* /*p_instance*/,
+                                   vk::SurfaceKHR* /*p_surface*/,
+                                   std::vector<char const*>& device_extensions)
+    -> vk::Device {
+    // float queue_priority = 0.f;
+    // vk::DeviceQueueCreateInfo device_queue_create_info(
+    //     vk::DeviceQueueCreateFlags(), compute_queue_family_index, 1,
+    //     &queue_priority);
+    // // vk::PhysicalDeviceFeatures physical_device_features{};
+
+    // vk::DeviceCreateInfo device_create_info(
+    //     vk::DeviceCreateFlags(), device_queue_create_info, {},
+    //     device_extensions, {}  // &physical_device_features
+    // );
+
     // vk::Device logical_device =
-    //     capable_physical_device.createDevice(vk::DeviceCreateInfo(
-    //         vk::DeviceCreateFlags(), device_queue_create_info));
-    return logical_device;
+    //     capable_physical_device.createDevice(device_create_info);
+
+    // return logical_device;
 }
 
 }  // namespace crow
