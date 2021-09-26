@@ -20,31 +20,32 @@ void game::initialize() {
                                     SDL_WINDOWPOS_CENTERED, 1280, 720,
                                     SDL_WINDOW_VULKAN);
         if (p_window == nullptr) {
-            throw std::runtime_error("Failed to create SDL2 window.");
+            throw std::runtime_error(SDL_GetError());
         }
         // crow::make_vk_features();  // This mutates global::device_features
         // this->vk_features = global::device_features.features_basic;
         vk::ApplicationInfo app_info(CMAKE_GAME_TITLE, 0,
                                      "2108_GDBS_LogicVisions_GameEngine", 0,
                                      VK_API_VERSION_1_2);
-        std::vector<char const*> extension_names =
-            crow::make_vk_extensions(p_window);
-        std::vector<char const*> layer_names = crow::make_vk_layer_names();
+        std::vector<char const*> instance_extensions =
+            crow::make_vk_instance_extensions(p_window);
+        std::vector<char const*> instance_layers = crow::make_vk_layer_names();
         vk::InstanceCreateInfo instance_info = crow::make_vk_instance_info(
-            &extension_names, &layer_names, &app_info);
+            &instance_extensions, &instance_layers, &app_info);
         this->vk_instance = vk::createInstance(instance_info);
         std::vector<const char*> device_extensions =
-            crow::make_device_extensions();
+            crow::make_vk_device_extensions();
         this->vk_device =
             crow::make_vk_logical_device(&vk_instance, device_extensions);
 
-        SDL_Vulkan_CreateSurface(
-            this->p_window, static_cast<VkInstance>(this->vk_instance),
-            reinterpret_cast<VkSurfaceKHR*>(&this->vk_surface));
-        // if (!this->vk_surface) {
-        //     throw std::runtime_error(
-        //         "Failed to create an SDL2 Vulkan surface.");
-        // }
+        VkSurfaceKHR p_temp_surface = nullptr;
+        // NOLINTNEXTLINE
+        if (SDL_Vulkan_CreateSurface(this->p_window,
+                                     static_cast<VkInstance>(this->vk_instance),
+                                     &p_temp_surface) == SDL_FALSE) {
+            throw std::runtime_error(SDL_GetError());
+        }
+        this->vk_surface = vk::SurfaceKHR(p_temp_surface);
     } catch (std::exception& e) {
         // TODO: Set up fmt::
         std::cerr << e.what() << "\n";

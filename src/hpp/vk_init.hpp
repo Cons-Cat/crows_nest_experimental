@@ -10,14 +10,13 @@
 
 namespace crow {
 
-inline auto make_vk_extensions(SDL_Window* p_window)
+inline auto make_vk_instance_extensions(SDL_Window* p_window)
     -> std::vector<char const*> {
     uint32_t extension_count = 0;
     SDL_Vulkan_GetInstanceExtensions(p_window, &extension_count, nullptr);
-    std::vector<char const*> extension_names;
+    std::vector<char const*> extension_names(extension_count);
     SDL_Vulkan_GetInstanceExtensions(p_window, &extension_count,
                                      extension_names.data());
-
     extension_names.push_back("VK_KHR_surface");
     return extension_names;
 }
@@ -138,7 +137,7 @@ inline void get_vk_features() {
     // given physical device is viable.
 }
 
-inline auto make_device_extensions() -> std::vector<char const*> {
+inline auto make_vk_device_extensions() -> std::vector<char const*> {
     std::vector<char const*> extension_names{
         VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
         VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,

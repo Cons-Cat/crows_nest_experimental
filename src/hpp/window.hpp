@@ -7,6 +7,7 @@
 namespace crow {
 
 struct game {
+    // TODO: Move these to private and make getters.
     SDL_Window* p_window{};
     vk::Instance vk_instance;
     vk::Device vk_device;
@@ -16,6 +17,10 @@ struct game {
     void initialize();
     void loop();
     void destroy() const;
+
+   private:
+    uint32_t window_width;
+    uint32_t window_height;
 };
 
 }  // namespace crow
