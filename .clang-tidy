@@ -1,5 +1,15 @@
 ---
 Checks:          'bugprone-*,cppcoreguidelines-*,google-*,performance-*,misc-*,modernize-*,readability-*,-cppcoreguidelines-macro-usage,-cppcoreguidelines-avoid-magic-numbers,-readability-magic-numbers,-readability-uppercase-literal-suffix,-modernize-use-auto,-cppcoreguidelines-pro-type-union-access,-cppcoreguidelines-pro-type-reinterpret-cast,-google-readability-todo,-misc-non-private-member-variables-in-classes'
+
+CheckOptions:
+  - { key: readability-identifier-naming.VariableCase,                    value: lower_case }
+  - { key: readability-identifier-naming.StructCase,                      value: lower_case }
+  - { key: readability-identifier-naming.FunctionCase,                    value: lower_case }
+  - { key: readability-identifier-naming.NamespaceCase,                   value: lower_case }
+  - { key: readability-identifier-naming.PointerParameterPrefix,          value: p_ }
+  - { key: readability-identifier-naming.LocalPointerPrefix,              value: p_ }
+  - { key: readability-identifier-naming.LocalConstantPointerPrefix,      value: p_ }
+
 WarningsAsErrors: ''
 HeaderFilterRegex: ^src
 AnalyzeTemporaryDtors: false

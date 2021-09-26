@@ -4,6 +4,7 @@
 #include <SDL.h>
 #include <SDL_vulkan.h>
 #include <assert.h>
+#include <iostream>
 #include <optional>
 
 #include "vk_globals.hpp"
@@ -14,23 +15,12 @@ inline auto make_vk_extensions(SDL_Window* p_window)
     -> std::vector<char const*> {
     uint32_t extension_count = 0;
     SDL_Vulkan_GetInstanceExtensions(p_window, &extension_count, nullptr);
-    std::vector<char const*> extension_names(extension_count);
+    std::vector<char const*> extension_names;
     SDL_Vulkan_GetInstanceExtensions(p_window, &extension_count,
                                      extension_names.data());
-    // extension_names.insert(extension_names.end(),
-    //                        {
-    //                            VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
-    //                            VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
-    //                            VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
-    //                            VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
-    //                            VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
-    //                            VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME,
-    //                            VK_KHR_SPIRV_1_4_EXTENSION_NAME,
-    //                            VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME,
-    //                            VK_EXT_SCALAR_BLOCK_LAYOUT_EXTENSION_NAME,
-    //                        });
+
+    extension_names.push_back("VK_KHR_surface");
     return extension_names;
-    int exension_name = 0;
 }
 
 inline auto make_vk_features() {
@@ -125,9 +115,6 @@ inline auto make_vk_instance_info(
 inline auto is_device_capable(vk::PhysicalDevice device)
     -> std::optional<size_t> {
     vk::PhysicalDeviceProperties2 device_properties = device.getProperties2();
-    vk::PhysicalDeviceFeatures2 device_features = device.getFeatures2();
-    std::vector<vk::QueueFamilyProperties2> queueFamilyProperties =
-        device.getQueueFamilyProperties2();
 
     // TODO: This might not be reliable.
     // Find a video card that can support raytracing and blitting.
@@ -147,16 +134,44 @@ inline auto is_device_capable(vk::PhysicalDevice device)
     return std::nullopt;
 }
 
-inline auto make_vk_logical_device(vk::Instance* instance) -> vk::Device {
+inline void get_vk_features() {
+    // TODO: Get the features needed for rendering this game, to verify that a
+    // given physical device is viable.
+}
+
+inline auto make_device_extensions() -> std::vector<char const*> {
+    std::vector<char const*> extension_names;
+    extension_names.insert(extension_names.end(),
+                           {
+                               VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+                               VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+                               VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+                               VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
+                               VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+                               VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME,
+                               VK_KHR_SPIRV_1_4_EXTENSION_NAME,
+                               VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME,
+                               VK_EXT_SCALAR_BLOCK_LAYOUT_EXTENSION_NAME,
+                           });
+    return extension_names;
+}
+
+inline auto make_vk_logical_device(vk::Instance* p_instance,
+                                   std::vector<char const*>& device_extensions)
+    -> vk::Device {
     // TODO: Check all video cards and find ideal one.
     vk::PhysicalDevice capable_physical_device = VK_NULL_HANDLE;
     std::vector<vk::PhysicalDevice> physical_devices =
-        instance->enumeratePhysicalDevices();
+        p_instance->enumeratePhysicalDevices();
     if (physical_devices.empty()) {
         throw std::runtime_error("Failed to find a Vulkan-capable GPU.");
     }
     size_t compute_queue_family_index = 0;
-    for (auto& device : physical_devices) {
+    uint32_t device_index = 0;
+
+    for (int i = 0; i < physical_devices.size(); i++) {
+        auto device = physical_devices[i];
+        device_index = i;
         std::optional<size_t> maybe_index = is_device_capable(device);
         if (maybe_index.has_value()) {
             compute_queue_family_index = maybe_index.value();
@@ -167,14 +182,25 @@ inline auto make_vk_logical_device(vk::Instance* instance) -> vk::Device {
     if (!capable_physical_device) {
         throw std::runtime_error("Failed to find a GPU for raytracing.");
     }
+#ifdef CMAKE_DEBUG
+    std::cout << "Selected device: [" << device_index << "]\n";
+#endif
 
     float queue_priority = 0.f;
     vk::DeviceQueueCreateInfo device_queue_create_info(
-        vk::DeviceQueueCreateFlags(),
-        static_cast<uint32_t>(compute_queue_family_index), 1, &queue_priority);
+        vk::DeviceQueueCreateFlags(), compute_queue_family_index, 1,
+        &queue_priority);
+    // vk::PhysicalDeviceFeatures physical_device_features{};
+
+    vk::DeviceCreateInfo device_create_info(
+        vk::DeviceCreateFlags(), device_queue_create_info, {},
+        device_extensions, {}  // &physical_device_features
+    );
     vk::Device logical_device =
-        capable_physical_device.createDevice(vk::DeviceCreateInfo(
-            vk::DeviceCreateFlags(), device_queue_create_info));
+        capable_physical_device.createDevice(device_create_info);
+    // vk::Device logical_device =
+    //     capable_physical_device.createDevice(vk::DeviceCreateInfo(
+    //         vk::DeviceCreateFlags(), device_queue_create_info));
     return logical_device;
 }
 

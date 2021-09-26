@@ -33,15 +33,18 @@ void game::initialize() {
         vk::InstanceCreateInfo instance_info = crow::make_vk_instance_info(
             &extension_names, &layer_names, &app_info);
         this->vk_instance = vk::createInstance(instance_info);
-        this->vk_device = crow::make_vk_logical_device(&vk_instance);
+        std::vector<const char*> device_extensions =
+            crow::make_device_extensions();
+        this->vk_device =
+            crow::make_vk_logical_device(&vk_instance, device_extensions);
 
         SDL_Vulkan_CreateSurface(
             this->p_window, static_cast<VkInstance>(this->vk_instance),
             reinterpret_cast<VkSurfaceKHR*>(&this->vk_surface));
-        if (!this->vk_surface) {
-            throw std::runtime_error(
-                "Failed to create an SDL2 Vulkan surface.");
-        }
+        // if (!this->vk_surface) {
+        //     throw std::runtime_error(
+        //         "Failed to create an SDL2 Vulkan surface.");
+        // }
     } catch (std::exception& e) {
         // TODO: Set up fmt::
         std::cerr << e.what() << "\n";
