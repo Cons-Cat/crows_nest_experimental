@@ -90,22 +90,10 @@ void game::initialize() {
             window_extent, format, present_mode, rasterization_queue_index,
             presentation_queue_index);
 
-        std::vector<vk::Image> swap_chain_images =
+        std::vector<vk::Image> swapchain_images =
             vk_logical_device.getSwapchainImagesKHR(swapchain);
-
-        this->vk_image_views.reserve(swap_chain_images.size());
-        vk::ComponentMapping component_mapping(
-            vk::ComponentSwizzle::eR, vk::ComponentSwizzle::eG,
-            vk::ComponentSwizzle::eB, vk::ComponentSwizzle::eA);
-        vk::ImageSubresourceRange sub_resource_range(
-            vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
-        for (auto image : swap_chain_images) {
-            vk::ImageViewCreateInfo image_view_create_info(
-                vk::ImageViewCreateFlags(), image, vk::ImageViewType::e2D,
-                format, component_mapping, sub_resource_range);
-            this->vk_image_views.push_back(
-                vk_logical_device.createImageView(image_view_create_info));
-        }
+        this->vk_image_views = crow::make_image_views(
+            &this->vk_logical_device, &swapchain_images, format);
 
         vk::RenderPass vk_render_pass;
     } catch (std::exception& e) {
