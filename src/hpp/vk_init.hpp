@@ -124,7 +124,6 @@ inline auto is_device_capable(vk::PhysicalDevice device)
     auto property_iterator = std::find_if(
         queue_family_properties.begin(), queue_family_properties.end(),
         [](vk::QueueFamilyProperties const& qfp) {
-            // return qfp.queueFlags & vk::QueueFlagBits::eCompute;
             return qfp.queueFlags & vk::QueueFlagBits::eCompute;
         });
     size_t compute_queue_family_index =
@@ -192,10 +191,6 @@ inline auto find_queue_family_index(
     vk::QueueFlagBits queue_flag) -> uint32_t {
     for (int i = 0; i < queue_family_properties.size(); i++) {
         auto qfp = queue_family_properties[i];
-        // if (queue_flag == vk::QueueFlagBits::eCompute && qfp.queueCount == 8)
-        // {
-        //     return i;
-        // }
         if (qfp.queueFlags & queue_flag) {
             return i;
         }
@@ -282,25 +277,78 @@ inline auto make_vk_queue_indices(vk::PhysicalDevice* p_device,
                            compute_queue_family_index);
 }
 
-inline auto make_vk_logical_device(vk::Instance* /*p_instance*/,
+inline auto make_vk_logical_device(vk::PhysicalDevice* p_physical_device,
+                                   vk::Instance* /*p_instance*/,
                                    vk::SurfaceKHR* /*p_surface*/,
-                                   std::vector<char const*>& device_extensions)
+                                   std::vector<char const*>& device_extensions,
+                                   uint32_t compute_queue_family_index,
+                                   uint32_t rasterization_queue_family_index)
     -> vk::Device {
-    // float queue_priority = 0.f;
-    // vk::DeviceQueueCreateInfo device_queue_create_info(
-    //     vk::DeviceQueueCreateFlags(), compute_queue_family_index, 1,
-    //     &queue_priority);
-    // // vk::PhysicalDeviceFeatures physical_device_features{};
+    float rasterization_queue_priority = 1.f;
+    float compute_queue_priority = 1.f;
+    vk::DeviceQueueCreateInfo device_rasterization_queue_create_info(
+        vk::DeviceQueueCreateFlags(), rasterization_queue_family_index, 1,
+        &rasterization_queue_priority);
+    vk::DeviceQueueCreateInfo device_compute_queue_create_info(
+        vk::DeviceQueueCreateFlags(), compute_queue_family_index, 1,
+        &compute_queue_priority);
+    // vk::PhysicalDeviceFeatures physical_device_features{};
+    std::vector<vk::DeviceQueueCreateInfo> device_queues_infos = {
+        device_rasterization_queue_create_info,
+        device_compute_queue_create_info};
 
-    // vk::DeviceCreateInfo device_create_info(
-    //     vk::DeviceCreateFlags(), device_queue_create_info, {},
-    //     device_extensions, {}  // &physical_device_features
-    // );
+    vk::DeviceCreateInfo device_create_info(
+        vk::DeviceCreateFlags(), device_queues_infos, {}, device_extensions, {}
+        // &physical_device_features
+    );
 
-    // vk::Device logical_device =
-    //     capable_physical_device.createDevice(device_create_info);
+    vk::Device logical_device =
+        p_physical_device->createDevice(device_create_info);
 
-    // return logical_device;
+    return logical_device;
+}
+
+// TODO: Pass by pointer?
+inline auto make_vk_swapchain(
+    vk::Device& logical_device, vk::PhysicalDevice& physical_device,
+    vk::SurfaceKHR& surface, vk::Extent2D& extent, vk::Format& format,
+    vk::PresentModeKHR& present_mode, uint32_t rasterization_queue_family_index,
+    uint32_t present_queue_family_index) -> vk::SwapchainKHR {
+    vk::SurfaceCapabilitiesKHR surface_capabilities =
+        physical_device.getSurfaceCapabilitiesKHR(surface);
+    uint32_t frame_count = std::clamp(std::numeric_limits<uint32_t>::max(),
+                                      surface_capabilities.minImageCount,
+                                      surface_capabilities.maxImageCount);
+
+    vk::SurfaceTransformFlagBitsKHR pre_transform =
+        surface_capabilities.currentTransform;
+    // TODO: Look into this more for optimizations.
+    vk::CompositeAlphaFlagBitsKHR composite_alpha =
+        vk::CompositeAlphaFlagBitsKHR::eOpaque;
+
+    vk::SwapchainCreateInfoKHR swapchain_create_info(
+        vk::SwapchainCreateFlagsKHR(), surface, frame_count, format,
+        vk::ColorSpaceKHR::eSrgbNonlinear, extent, 1u,
+        vk::ImageUsageFlagBits::eColorAttachment, vk::SharingMode::eExclusive,
+        {}, pre_transform, composite_alpha, present_mode, VK_TRUE,
+        VK_NULL_HANDLE);
+
+    std::array<uint32_t, 2> queue_family_indices = {
+        static_cast<uint32_t>(rasterization_queue_family_index),
+        static_cast<uint32_t>(present_queue_family_index),
+    };
+    if (rasterization_queue_family_index != present_queue_family_index) {
+        // If the rasterization and presentation queues are from different queue
+        // families, create the swapchain with `imageSharingMode` as
+        // `vk::SharingMode::eConcurrent`.
+        swapchain_create_info.imageSharingMode = vk::SharingMode::eConcurrent;
+        swapchain_create_info.queueFamilyIndexCount = 2;
+        swapchain_create_info.pQueueFamilyIndices = queue_family_indices.data();
+    }
+
+    vk::SwapchainKHR swapchain =
+        logical_device.createSwapchainKHR(swapchain_create_info);
+    return swapchain;
 }
 
 }  // namespace crow

@@ -4,6 +4,7 @@
 
 #include <SDL.h>
 #include <SDL_vulkan.h>
+#include <algorithm>
 #include <exception>
 #include <iostream>
 #include <stdexcept>
@@ -41,18 +42,43 @@ void game::initialize() {
             throw std::runtime_error(SDL_GetError());
         }
         this->vk_surface = vk::SurfaceKHR(p_temp_surface);
-
         vk::PhysicalDevice vk_physical_device =
             crow::find_vk_physical_device(&this->vk_instance);
         std::vector<const char*> device_extensions =
             crow::make_vk_device_extensions();
-
         auto const& [rasterization_queue_index, presentation_queue_index,
                      compute_queue_index] =
             crow::make_vk_queue_indices(&vk_physical_device, &this->vk_surface);
-
         this->vk_logical_device = crow::make_vk_logical_device(
-            &vk_instance, &this->vk_surface, device_extensions);
+            &vk_physical_device, &vk_instance, &this->vk_surface,
+            device_extensions, rasterization_queue_index, compute_queue_index);
+        // TODO: Prove that BGRA-SRGB is supported.
+        vk::Format format = vk::Format::eB8G8R8A8Srgb;
+        vk::SurfaceCapabilitiesKHR surface_capabilities =
+            vk_physical_device.getSurfaceCapabilitiesKHR(this->vk_surface);
+        // TODO: FIFO is guaranteed by the spec to be available. But mailbox may
+        // be preferable if it is present.
+        vk::PresentModeKHR present_mode = vk::PresentModeKHR::eFifo;
+        // TODO: Extract vk::Extent2D to a function.
+        // This looks inefficient, but these data types are required by SDL2.
+        vk::Extent2D swapchain_extent;
+        int width = 0;
+        int height = 0;
+        SDL_Vulkan_GetDrawableSize(p_window, &width, &height);
+        width = std::clamp(
+            width, static_cast<int>(surface_capabilities.minImageExtent.width),
+            static_cast<int>(surface_capabilities.maxImageExtent.width));
+        height = std::clamp(
+            height,
+            static_cast<int>(surface_capabilities.minImageExtent.height),
+            static_cast<int>(surface_capabilities.maxImageExtent.height));
+        vk::Extent2D window_extent = {static_cast<uint32_t>(width),
+                                      static_cast<uint32_t>(height)};
+
+        vk::SwapchainKHR swapchain = crow::make_vk_swapchain(
+            this->vk_logical_device, vk_physical_device, this->vk_surface,
+            window_extent, format, present_mode, rasterization_queue_index,
+            presentation_queue_index);
     } catch (std::exception& e) {
         // TODO: Set up fmt::
         std::cerr << e.what() << "\n";
