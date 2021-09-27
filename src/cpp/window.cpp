@@ -23,8 +23,6 @@ void game::initialize() {
         if (p_window == nullptr) {
             throw std::runtime_error(SDL_GetError());
         }
-        // crow::make_vk_features();  // This mutates global::device_features
-        // this->vk_features = global::device_features.features_basic;
         vk::ApplicationInfo app_info(CMAKE_GAME_TITLE, 0,
                                      "2108_GDBS_LogicVisions_GameEngine", 0,
                                      VK_API_VERSION_1_2);
@@ -44,6 +42,18 @@ void game::initialize() {
         this->vk_surface = vk::SurfaceKHR(p_temp_surface);
         vk::PhysicalDevice vk_physical_device =
             crow::find_vk_physical_device(&this->vk_instance);
+
+        // TODO: More precise device features query.
+        // crow::make_vk_features();  // This mutates global::device_features
+        // this->vk_features = global::device_features.features_basic;
+        auto supported_features = vk_physical_device.getFeatures2<
+            vk::PhysicalDeviceFeatures2,
+            vk::PhysicalDeviceAccelerationStructureFeaturesKHR,
+            vk::PhysicalDeviceBufferDeviceAddressFeaturesKHR,
+            vk::PhysicalDeviceDescriptorIndexingFeaturesEXT,
+            vk::PhysicalDeviceRayTracingPipelineFeaturesKHR,
+            vk::PhysicalDeviceScalarBlockLayoutFeaturesEXT>();
+
         std::vector<const char*> device_extensions =
             crow::make_vk_device_extensions();
         auto const& [rasterization_queue_index, presentation_queue_index,
@@ -79,6 +89,25 @@ void game::initialize() {
             this->vk_logical_device, vk_physical_device, this->vk_surface,
             window_extent, format, present_mode, rasterization_queue_index,
             presentation_queue_index);
+
+        std::vector<vk::Image> swap_chain_images =
+            vk_logical_device.getSwapchainImagesKHR(swapchain);
+
+        this->vk_image_views.reserve(swap_chain_images.size());
+        vk::ComponentMapping component_mapping(
+            vk::ComponentSwizzle::eR, vk::ComponentSwizzle::eG,
+            vk::ComponentSwizzle::eB, vk::ComponentSwizzle::eA);
+        vk::ImageSubresourceRange sub_resource_range(
+            vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+        for (auto image : swap_chain_images) {
+            vk::ImageViewCreateInfo image_view_create_info(
+                vk::ImageViewCreateFlags(), image, vk::ImageViewType::e2D,
+                format, component_mapping, sub_resource_range);
+            this->vk_image_views.push_back(
+                vk_logical_device.createImageView(image_view_create_info));
+        }
+
+        vk::RenderPass vk_render_pass;
     } catch (std::exception& e) {
         // TODO: Set up fmt::
         std::cerr << e.what() << "\n";
@@ -100,6 +129,10 @@ void game::loop() {
 }
 
 void game::destroy() const {
+    for (auto const& image_view : this->vk_image_views) {
+        this->vk_logical_device.destroyImageView(image_view);
+    }
+    this->vk_logical_device.destroySwapchainKHR();
     this->vk_logical_device.destroy();
     this->vk_instance.destroySurfaceKHR(this->vk_surface);
     this->vk_instance.destroy();

@@ -351,4 +351,38 @@ inline auto make_vk_swapchain(
     return swapchain;
 }
 
+// TODO: This needs be modernized.
+inline auto find_supported_format(vk::PhysicalDevice* p_physical_device,
+                                  std::vector<VkFormat> const& candidates,
+                                  VkImageTiling tiling,
+                                  VkFormatFeatureFlags features) -> vk::Format {
+    for (auto const& format : candidates) {
+        VkFormatProperties props;
+        vkGetPhysicalDeviceFormatProperties(
+            static_cast<VkPhysicalDevice>(*p_physical_device),
+            static_cast<VkFormat>(format), &props);
+
+        if (static_cast<VkImageTiling>(tiling) == VK_IMAGE_TILING_LINEAR &&
+            (props.linearTilingFeatures & features) == features) {
+            return static_cast<vk::Format>(format);
+        }
+        if (static_cast<VkImageTiling>(tiling) == VK_IMAGE_TILING_OPTIMAL &&
+            (props.optimalTilingFeatures & features) == features) {
+            return static_cast<vk::Format>(format);
+        }
+    }
+
+    throw std::runtime_error("Failed to find a supported format");
+}
+
+inline auto find_depth_format(vk::PhysicalDevice* p_physical_device)
+    -> vk::Format {
+    return find_supported_format(
+        p_physical_device,
+        {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
+         VK_FORMAT_D24_UNORM_S8_UINT},
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+}
+
 }  // namespace crow
