@@ -5,6 +5,7 @@
 #include <SDL_vulkan.h>
 #include <iostream>
 #include <optional>
+#include <string>
 
 #include "vk_globals.hpp"
 
@@ -189,16 +190,23 @@ inline auto find_vk_physical_device(vk::Instance* p_instance)
 inline auto find_queue_family_index(
     std::vector<vk::QueueFamilyProperties> const& queue_family_properties,
     vk::QueueFlagBits queue_flag) -> uint32_t {
-    // Get the first index into queueFamiliyProperties which supports this flag.
-    std::vector<vk::QueueFamilyProperties>::const_iterator
-        queue_family_property = std::find_if(
-            queue_family_properties.begin(), queue_family_properties.end(),
-            [=](vk::QueueFamilyProperties const& qfp) {
-                return qfp.queueFlags & queue_flag;
-            });
-    // assert(queue_family_property != queueFamilyProperties.end());
-    return static_cast<uint32_t>(
-        std::distance(queue_family_properties.begin(), queue_family_property));
+    for (int i = 0; i < queue_family_properties.size(); i++) {
+        auto qfp = queue_family_properties[i];
+        // if (queue_flag == vk::QueueFlagBits::eCompute && qfp.queueCount == 8)
+        // {
+        //     return i;
+        // }
+        if (qfp.queueFlags & queue_flag) {
+            return i;
+        }
+    }
+    throw std::runtime_error("Failed to find a queue family that supports " +
+                             to_string(queue_flag));
+    // TODO: On my video card, and many others, there are two compute queue
+    // families. One is consolidated into the graphics queue family, and another
+    // is dedicated to compute. It would be best to utilize the dedicated
+    // compute queue for compute kernels, if possible on a given video card, so
+    // that game UI can render in parallel to raytracing.
 }
 
 inline auto make_vk_queue_indices(vk::PhysicalDevice* p_device,
@@ -209,43 +217,65 @@ inline auto make_vk_queue_indices(vk::PhysicalDevice* p_device,
 {
     std::vector<vk::QueueFamilyProperties> queue_family_properties =
         p_device->getQueueFamilyProperties();
-    auto graphics_queue_family_index = find_queue_family_index(
+#ifdef CMAKE_DEBUG
+    for (auto& queue_family : queue_family_properties) {
+        std::cout << "Queue number: " + std::to_string(queue_family.queueCount)
+                  << '\n';
+        std::cout << "Queue flags: " + to_string(queue_family.queueFlags)
+                  << '\n';
+    }
+#endif
+
+    auto rasterization_queue_family_index = find_queue_family_index(
         queue_family_properties, vk::QueueFlagBits::eGraphics);
     auto compute_queue_family_index = find_queue_family_index(
         queue_family_properties, vk::QueueFlagBits::eCompute);
+#ifdef CMAKE_DEBUG
+    std::cout << "Found rasterization queue family "
+                 "index: "
+              << rasterization_queue_family_index << '\n';
+    std::cout << "Found compute queue family index: "
+              << compute_queue_family_index << '\n';
+#endif
 
     uint32_t present_queue_family_index =
-        p_device->getSurfaceSupportKHR(graphics_queue_family_index,
+        p_device->getSurfaceSupportKHR(rasterization_queue_family_index,
                                        *p_surface) != 0
-            ? graphics_queue_family_index
+            ? rasterization_queue_family_index
             : queue_family_properties.size();
-    if (present_queue_family_index == queue_family_properties.size()) {
-        // look for another family index that supports both graphics and present
-        for (size_t i = 0; i < queue_family_properties.size(); i++) {
-            if ((queue_family_properties[i].queueFlags &
-                 vk::QueueFlagBits::eGraphics) &&
-                (p_device->getSurfaceSupportKHR(static_cast<uint32_t>(i),
-                                                *p_surface) != 0)) {
-                graphics_queue_family_index = i;
-                present_queue_family_index = i;
-                break;
-            }
-        }
-        if (present_queue_family_index == queue_family_properties.size()) {
+
+    // TODO: A rasterization queue is not guaranteed to support presentation.
+    // Some video cards have multiple rasterization queues, so selecting one
+    // that does support presentation is necessary.
+    // TODO: This should be extracted to a separate function.
+    /*    if (present_queue_family_index == queue_family_properties.size()) {
             for (size_t i = 0; i < queue_family_properties.size(); i++) {
-                if (p_device->getSurfaceSupportKHR(static_cast<uint32_t>(i),
-                                                   *p_surface) != 0) {
+                if ((queue_family_properties[i].queueFlags &
+                     vk::QueueFlagBits::eGraphics) &&
+                    (p_device->getSurfaceSupportKHR(static_cast<uint32_t>(i),
+                                                    *p_surface) != 0)) {
+                    rasterization_queue_family_index = i;
                     present_queue_family_index = i;
                     break;
                 }
             }
+            if (present_queue_family_index == queue_family_properties.size()) {
+                for (size_t i = 0; i < queue_family_properties.size(); i++) {
+                    if (p_device->getSurfaceSupportKHR(static_cast<uint32_t>(i),
+                                                       *p_surface) != 0) {
+                        present_queue_family_index = i;
+                        break;
+                    }
+                }
+            }
         }
-    }
-    if ((graphics_queue_family_index == queue_family_properties.size()) ||
-        (present_queue_family_index == queue_family_properties.size())) {
-        throw std::runtime_error(
-            "Could not find a queue for graphics or present -> terminating");
-    }
+        if ((rasterization_queue_family_index == queue_family_properties.size())
+       || (present_queue_family_index == queue_family_properties.size())) {
+            throw std::runtime_error(
+                "Could not find a queue for graphics or present ->
+       terminating");
+        }
+    */
 
     return std::make_tuple(present_queue_family_index,
                            present_queue_family_index,
