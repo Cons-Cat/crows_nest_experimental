@@ -354,17 +354,73 @@ inline auto make_swapchain_fences(vk::Device* p_logical_device,
     return fences;
 }
 
-inline auto make_command_pool(vk::Device* p_device, uint32_t queue_family_index)
-    -> vk::CommandPool {
-    vk::CommandPoolCreateInfo cmd_pool_info(vk::CommandPoolCreateFlags(),
-                                            queue_family_index);
-    return p_device->createCommandPool(cmd_pool_info);
+inline auto make_render_pass(vk::Device* p_logical_device,
+                             vk::Format color_format, vk::Format depth_format)
+    -> vk::RenderPass {
+    std::array<vk::AttachmentDescription, 2> attachment_descriptions;
+    attachment_descriptions[0] = vk::AttachmentDescription(
+        vk::AttachmentDescriptionFlags(), color_format,
+        vk::SampleCountFlagBits::e1, vk::AttachmentLoadOp::eClear,
+        vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
+        vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined,
+        vk::ImageLayout::ePresentSrcKHR);
+    attachment_descriptions[1] = vk::AttachmentDescription(
+        vk::AttachmentDescriptionFlags(), depth_format,
+        vk::SampleCountFlagBits::e1, vk::AttachmentLoadOp::eClear,
+        vk::AttachmentStoreOp::eDontCare, vk::AttachmentLoadOp::eDontCare,
+        vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined,
+        vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+    vk::AttachmentReference color_reference(
+        0, vk::ImageLayout::eColorAttachmentOptimal);
+    vk::AttachmentReference depth_reference(
+        1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+    vk::SubpassDescription subpass(vk::SubpassDescriptionFlags(),
+                                   vk::PipelineBindPoint::eGraphics, {},
+                                   color_reference, {}, &depth_reference);
+
+    return p_logical_device->createRenderPass(vk::RenderPassCreateInfo(
+        vk::RenderPassCreateFlags(), attachment_descriptions, subpass));
 }
 
-inline auto alloc_command_buffer(vk::Device* p_device,
+inline void update_render_pass(vk::Device* p_logical_device,
+                               vk::RenderPass* p_render_pass,
+                               vk::Format color_format,
+                               vk::Format depth_format) {
+    p_logical_device->destroyRenderPass(*p_render_pass);
+    *p_render_pass =
+        crow::make_render_pass(p_logical_device, color_format, depth_format);
+}
+
+inline auto make_framebuffers(
+    vk::Device* /*p_logical_device*/,
+    std::vector<vk::ImageView>* p_swapchain_image_views)
+    -> std::vector<vk::Framebuffer> {
+    std::vector<vk::Framebuffer> framebuffers;
+    framebuffers.resize(p_swapchain_image_views->size());
+
+    std::vector<vk::ImageView> attachments{};
+    attachments.reserve(framebuffers.size());
+    for (int i = 0; i < framebuffers.size(); i++) {
+        attachments.emplace_back((*p_swapchain_image_views)[i]);
+    }
+    // vk::FramebufferCreateInfo framebuffer_info(vk::FramebufferCreateFlags(),
+    //                                            *p_render_pass, );
+    return framebuffers;
+}
+
+inline auto make_command_pool(vk::Device* p_logical_device,
+                              uint32_t queue_family_index) -> vk::CommandPool {
+    vk::CommandPoolCreateInfo cmd_pool_info(vk::CommandPoolCreateFlags(),
+                                            queue_family_index);
+    return p_logical_device->createCommandPool(cmd_pool_info);
+}
+
+inline auto alloc_command_buffer(vk::Device* p_logical_device,
                                  vk::CommandPool* p_cmd_pool)
     -> vk::CommandBuffer {
-    return p_device
+    return p_logical_device
         ->allocateCommandBuffers(vk::CommandBufferAllocateInfo(
             *p_cmd_pool, vk::CommandBufferLevel::ePrimary, 1))
         .front();

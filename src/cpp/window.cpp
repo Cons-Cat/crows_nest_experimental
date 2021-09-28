@@ -63,7 +63,8 @@ void game::initialize() {
             &vk_physical_device, &vk_instance, &this->vk_surface,
             device_extensions, rasterization_queue_index, compute_queue_index);
         // TODO: Prove that BGRA-SRGB is supported.
-        vk::Format format = vk::Format::eB8G8R8A8Srgb;
+        vk::Format color_format = vk::Format::eB8G8R8A8Srgb;
+        vk::Format depth_format = vk::Format::eD16Unorm;
         vk::SurfaceCapabilitiesKHR surface_capabilities =
             vk_physical_device.getSurfaceCapabilitiesKHR(this->vk_surface);
         // TODO: FIFO is guaranteed by the spec to be available. But mailbox may
@@ -86,13 +87,13 @@ void game::initialize() {
 
         this->vk_swapchain = crow::make_vk_swapchain(
             this->vk_logical_device, vk_physical_device, this->vk_surface,
-            window_extent, format, present_mode, rasterization_queue_index,
-            presentation_queue_index);
+            window_extent, color_format, present_mode,
+            rasterization_queue_index, presentation_queue_index);
 
         this->vk_swapchain_images =
             this->vk_logical_device.getSwapchainImagesKHR(this->vk_swapchain);
         this->vk_image_views = crow::make_image_views(
-            &this->vk_logical_device, &this->vk_swapchain_images, format);
+            &this->vk_logical_device, &this->vk_swapchain_images, color_format);
         this->vk_swapchain_fences = crow::make_swapchain_fences(
             &this->vk_logical_device, &this->vk_swapchain_images);
 
@@ -100,6 +101,9 @@ void game::initialize() {
             &this->vk_logical_device, compute_queue_index);
         this->vk_cmd_buffer_compute = crow::alloc_command_buffer(
             &this->vk_logical_device, &this->vk_cmd_pool_compute);
+
+        this->render_pass = crow::make_render_pass(&this->vk_logical_device,
+                                                   color_format, depth_format);
     } catch (std::exception& e) {
         // TODO: Set up fmt::
         std::cerr << e.what() << "\n";
@@ -129,6 +133,7 @@ void game::destroy() const {
         this->vk_logical_device.destroyImageView(image_view);
     }
     this->vk_logical_device.destroySwapchainKHR();
+    this->vk_logical_device.destroyRenderPass(this->render_pass);
     this->vk_logical_device.destroy();
     this->vk_instance.destroySurfaceKHR(this->vk_surface);
     this->vk_instance.destroy();
