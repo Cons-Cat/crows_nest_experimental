@@ -25,69 +25,6 @@ inline auto make_vk_instance_extensions(SDL_Window* p_window)
 }
 
 inline auto make_vk_features() {
-    global::device_features.features_basic = {
-#ifdef DEBUG
-        .fragmentStoresAndAtomics = VK_TRUE,
-#endif
-        .shaderSampledImageArrayDynamicIndexing = VK_TRUE,
-        .shaderStorageBufferArrayDynamicIndexing = VK_TRUE,
-    };
-
-    global::device_features.features_acceleration_structure = {
-        .sType =
-            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
-        .accelerationStructure = VK_TRUE,
-        .descriptorBindingAccelerationStructureUpdateAfterBind = VK_TRUE,
-    };
-
-    global::device_features.features_buffer_device_address = {
-        .sType =
-            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES_KHR,
-        .bufferDeviceAddress = VK_TRUE,
-    };
-
-    global::device_features.features_descriptor_indexing = {
-        .sType =
-            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT,
-        .shaderUniformTexelBufferArrayDynamicIndexing = VK_TRUE,
-        .shaderStorageTexelBufferArrayDynamicIndexing = VK_TRUE,
-        .shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
-        .shaderStorageBufferArrayNonUniformIndexing = VK_TRUE,
-        .shaderUniformTexelBufferArrayNonUniformIndexing = VK_TRUE,
-        .descriptorBindingSampledImageUpdateAfterBind = VK_TRUE,
-        .descriptorBindingStorageImageUpdateAfterBind = VK_TRUE,
-        .descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE,
-        .descriptorBindingUniformTexelBufferUpdateAfterBind = VK_TRUE,
-        .descriptorBindingStorageTexelBufferUpdateAfterBind = VK_TRUE,
-        .descriptorBindingUpdateUnusedWhilePending = VK_TRUE,
-        .descriptorBindingPartiallyBound = VK_TRUE,
-        .runtimeDescriptorArray = VK_TRUE,
-    };
-
-    global::device_features.features_ray_tracing_pipeline = {
-        .sType =
-            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
-        .rayTracingPipeline = VK_TRUE,
-        .rayTracingPipelineTraceRaysIndirect = VK_TRUE,
-    };
-
-    global::device_features.features_scalar_block_layout = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES,
-        .scalarBlockLayout = VK_TRUE,
-    };
-
-    // global::device_features.features_basic.pNext = &global::;
-
-    global::device_features.features_acceleration_structure.pNext =
-        &global::device_features.features_buffer_device_address;
-    global::device_features.features_buffer_device_address.pNext =
-        &global::device_features.features_descriptor_indexing;
-    global::device_features.features_descriptor_indexing.pNext =
-        &global::device_features.features_ray_tracing_pipeline;
-    global::device_features.features_ray_tracing_pipeline.pNext =
-        &global::device_features.features_scalar_block_layout;
-    // TODO:
-    // device_params.next = &features_acceleration_structure;
 }
 
 inline auto make_vk_layer_names() -> std::vector<char const*> {

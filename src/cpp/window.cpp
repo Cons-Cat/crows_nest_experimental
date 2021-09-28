@@ -94,8 +94,6 @@ void game::initialize() {
             vk_logical_device.getSwapchainImagesKHR(swapchain);
         this->vk_image_views = crow::make_image_views(
             &this->vk_logical_device, &swapchain_images, format);
-
-        vk::RenderPass vk_render_pass;
     } catch (std::exception& e) {
         // TODO: Set up fmt::
         std::cerr << e.what() << "\n";
