@@ -121,6 +121,10 @@ void game::loop() {
 }
 
 void game::destroy() const {
+    for (auto const& fence : this->vk_swapchain_fences) {
+        this->vk_logical_device.destroy(fence);
+    }
+    this->vk_logical_device.destroy(this->vk_cmd_pool_compute);
     for (auto const& image_view : this->vk_image_views) {
         this->vk_logical_device.destroyImageView(image_view);
     }
