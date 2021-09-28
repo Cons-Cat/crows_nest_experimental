@@ -13,8 +13,11 @@ struct game {
     vk::Device vk_logical_device;
     vk::SurfaceKHR vk_surface;
     vk::PhysicalDeviceFeatures2 vk_features;
+    vk::Extent2D window_extent;
     vk::SwapchainKHR vk_swapchain;
+    std::vector<vk::Image> vk_swapchain_images;
     std::vector<vk::ImageView> vk_image_views;
+    std::vector<vk::Fence> vk_swapchain_fences;
 
     void initialize();
     void loop();

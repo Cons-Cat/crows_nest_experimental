@@ -342,4 +342,16 @@ inline auto find_depth_format(vk::PhysicalDevice* p_physical_device)
         VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 
+inline auto make_swapchain_fences(vk::Device* p_logical_device,
+                                  std::vector<vk::Image>* p_swapchain_images)
+    -> std::vector<vk::Fence> {
+    vk::FenceCreateInfo fence_create_info(vk::FenceCreateFlagBits::eSignaled);
+    std::vector<vk::Fence> fences;
+    fences.resize(p_swapchain_images->size());
+    for (auto& fence : fences) {
+        fence = p_logical_device->createFence(fence_create_info);
+    }
+    return fences;
+}
+
 }  // namespace crow

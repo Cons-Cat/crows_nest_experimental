@@ -69,9 +69,8 @@ void game::initialize() {
         // TODO: FIFO is guaranteed by the spec to be available. But mailbox may
         // be preferable if it is present.
         vk::PresentModeKHR present_mode = vk::PresentModeKHR::eFifo;
-        // TODO: Extract vk::Extent2D to a function.
+        // TODO: Extract creation of vk::Extent2D to a function.
         // This looks inefficient, but these data types are required by SDL2.
-        vk::Extent2D swapchain_extent;
         int width = 0;
         int height = 0;
         SDL_Vulkan_GetDrawableSize(p_window, &width, &height);
@@ -82,18 +81,20 @@ void game::initialize() {
             height,
             static_cast<int>(surface_capabilities.minImageExtent.height),
             static_cast<int>(surface_capabilities.maxImageExtent.height));
-        vk::Extent2D window_extent = {static_cast<uint32_t>(width),
-                                      static_cast<uint32_t>(height)};
+        this->window_extent = vk::Extent2D{static_cast<uint32_t>(width),
+                                           static_cast<uint32_t>(height)};
 
         vk::SwapchainKHR swapchain = crow::make_vk_swapchain(
             this->vk_logical_device, vk_physical_device, this->vk_surface,
             window_extent, format, present_mode, rasterization_queue_index,
             presentation_queue_index);
 
-        std::vector<vk::Image> swapchain_images =
-            vk_logical_device.getSwapchainImagesKHR(swapchain);
+        this->vk_swapchain_images =
+            this->vk_logical_device.getSwapchainImagesKHR(swapchain);
         this->vk_image_views = crow::make_image_views(
-            &this->vk_logical_device, &swapchain_images, format);
+            &this->vk_logical_device, &this->vk_swapchain_images, format);
+        vk_swapchain_fences = crow::make_swapchain_fences(
+            &this->vk_logical_device, &this->vk_swapchain_images);
     } catch (std::exception& e) {
         // TODO: Set up fmt::
         std::cerr << e.what() << "\n";
