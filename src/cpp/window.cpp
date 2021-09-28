@@ -84,17 +84,22 @@ void game::initialize() {
         this->window_extent = vk::Extent2D{static_cast<uint32_t>(width),
                                            static_cast<uint32_t>(height)};
 
-        vk::SwapchainKHR swapchain = crow::make_vk_swapchain(
+        this->vk_swapchain = crow::make_vk_swapchain(
             this->vk_logical_device, vk_physical_device, this->vk_surface,
             window_extent, format, present_mode, rasterization_queue_index,
             presentation_queue_index);
 
         this->vk_swapchain_images =
-            this->vk_logical_device.getSwapchainImagesKHR(swapchain);
+            this->vk_logical_device.getSwapchainImagesKHR(this->vk_swapchain);
         this->vk_image_views = crow::make_image_views(
             &this->vk_logical_device, &this->vk_swapchain_images, format);
-        vk_swapchain_fences = crow::make_swapchain_fences(
+        this->vk_swapchain_fences = crow::make_swapchain_fences(
             &this->vk_logical_device, &this->vk_swapchain_images);
+
+        this->vk_cmd_pool_compute = crow::make_command_pool(
+            &this->vk_logical_device, compute_queue_index);
+        this->vk_cmd_buffer_compute = crow::alloc_command_buffer(
+            &this->vk_logical_device, &this->vk_cmd_pool_compute);
     } catch (std::exception& e) {
         // TODO: Set up fmt::
         std::cerr << e.what() << "\n";

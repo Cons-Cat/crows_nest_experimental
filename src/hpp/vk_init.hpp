@@ -354,4 +354,20 @@ inline auto make_swapchain_fences(vk::Device* p_logical_device,
     return fences;
 }
 
+inline auto make_command_pool(vk::Device* p_device, uint32_t queue_family_index)
+    -> vk::CommandPool {
+    vk::CommandPoolCreateInfo cmd_pool_info(vk::CommandPoolCreateFlags(),
+                                            queue_family_index);
+    return p_device->createCommandPool(cmd_pool_info);
+}
+
+inline auto alloc_command_buffer(vk::Device* p_device,
+                                 vk::CommandPool* p_cmd_pool)
+    -> vk::CommandBuffer {
+    return p_device
+        ->allocateCommandBuffers(vk::CommandBufferAllocateInfo(
+            *p_cmd_pool, vk::CommandBufferLevel::ePrimary, 1))
+        .front();
+}
+
 }  // namespace crow
