@@ -230,9 +230,18 @@ inline auto make_vk_logical_device(vk::PhysicalDevice* p_physical_device,
         vk::DeviceQueueCreateFlags(), compute_queue_family_index, 1,
         &compute_queue_priority);
     // vk::PhysicalDeviceFeatures physical_device_features{};
-    std::vector<vk::DeviceQueueCreateInfo> device_queues_infos = {
-        device_rasterization_queue_create_info,
-        device_compute_queue_create_info};
+
+    std::vector<vk::DeviceQueueCreateInfo> device_queues_infos;
+    if (compute_queue_family_index == rasterization_queue_family_index) {
+        device_queues_infos = {
+            device_rasterization_queue_create_info,
+        };
+    } else {
+        device_queues_infos = {
+            device_rasterization_queue_create_info,
+            device_compute_queue_create_info,
+        };
+    }
 
     vk::DeviceCreateInfo device_create_info(
         vk::DeviceCreateFlags(), device_queues_infos, {}, device_extensions, {}
