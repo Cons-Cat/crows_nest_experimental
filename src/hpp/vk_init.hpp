@@ -253,9 +253,9 @@ inline auto make_vk_swapchain(
     uint32_t present_queue_family_index) -> vk::SwapchainKHR {
     vk::SurfaceCapabilitiesKHR surface_capabilities =
         physical_device.getSurfaceCapabilitiesKHR(surface);
-    uint32_t frame_count = std::clamp(std::numeric_limits<uint32_t>::max(),
-                                      surface_capabilities.minImageCount,
-                                      surface_capabilities.maxImageCount);
+    uint32_t const swap_frame_count =
+        std::clamp(3u, surface_capabilities.minImageCount,
+                   surface_capabilities.maxImageCount);
 
     vk::SurfaceTransformFlagBitsKHR pre_transform =
         surface_capabilities.currentTransform;
@@ -264,7 +264,7 @@ inline auto make_vk_swapchain(
         vk::CompositeAlphaFlagBitsKHR::eOpaque;
 
     vk::SwapchainCreateInfoKHR swapchain_create_info(
-        vk::SwapchainCreateFlagsKHR(), surface, frame_count, format,
+        vk::SwapchainCreateFlagsKHR(), surface, swap_frame_count, format,
         vk::ColorSpaceKHR::eSrgbNonlinear, extent, 1u,
         vk::ImageUsageFlagBits::eColorAttachment, vk::SharingMode::eExclusive,
         {}, pre_transform, composite_alpha, present_mode, VK_TRUE,

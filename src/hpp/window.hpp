@@ -39,6 +39,7 @@ struct game {
     };
     std::array<vk::Queue, static_cast<size_t>(queue::COUNT)> vk_cmd_queues;
 
+    void render();
     void record_clear_raster(vk::CommandBuffer* p_cmd_buffer);
 };
 

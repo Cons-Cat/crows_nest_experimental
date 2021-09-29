@@ -39,7 +39,7 @@ void game::initialize() {
                                      &p_temp_surface) == SDL_FALSE) {
             throw std::runtime_error(SDL_GetError());
         }
-        this->vk_surface = vk::SurfaceKHR(p_temp_surface);
+        this->surface = vk::SurfaceKHR(p_temp_surface);
         vk::PhysicalDevice vk_physical_device =
             crow::find_vk_physical_device(&this->vk_instance);
 
@@ -58,15 +58,15 @@ void game::initialize() {
             crow::make_vk_device_extensions();
         auto const& [rasterization_queue_index, presentation_queue_index,
                      compute_queue_index] =
-            crow::make_vk_queue_indices(&vk_physical_device, &this->vk_surface);
-        this->vk_logical_device = crow::make_vk_logical_device(
-            &vk_physical_device, &vk_instance, &this->vk_surface,
+            crow::make_vk_queue_indices(&vk_physical_device, &this->surface);
+        this->logical_device = crow::make_vk_logical_device(
+            &vk_physical_device, &vk_instance, &this->surface,
             device_extensions, rasterization_queue_index, compute_queue_index);
         // TODO: Prove that BGRA-SRGB is supported.
         vk::Format color_format = vk::Format::eB8G8R8A8Srgb;
         vk::Format depth_format = vk::Format::eD16Unorm;
         vk::SurfaceCapabilitiesKHR surface_capabilities =
-            vk_physical_device.getSurfaceCapabilitiesKHR(this->vk_surface);
+            vk_physical_device.getSurfaceCapabilitiesKHR(this->surface);
         // TODO: FIFO is guaranteed by the spec to be available. But mailbox may
         // be preferable if it is present.
         vk::PresentModeKHR present_mode = vk::PresentModeKHR::eFifo;
@@ -85,28 +85,28 @@ void game::initialize() {
         this->window_extent = vk::Extent2D{static_cast<uint32_t>(width),
                                            static_cast<uint32_t>(height)};
 
-        this->vk_swapchain = crow::make_vk_swapchain(
-            this->vk_logical_device, vk_physical_device, this->vk_surface,
+        this->swapchain = crow::make_vk_swapchain(
+            this->logical_device, vk_physical_device, this->surface,
             window_extent, color_format, present_mode,
             rasterization_queue_index, presentation_queue_index);
 
-        this->vk_swapchain_images =
-            this->vk_logical_device.getSwapchainImagesKHR(this->vk_swapchain);
-        this->vk_image_views = crow::make_image_views(
-            &this->vk_logical_device, &this->vk_swapchain_images, color_format);
-        this->vk_swapchain_fences = crow::make_swapchain_fences(
-            &this->vk_logical_device, &this->vk_swapchain_images);
+        this->swapchain_images =
+            this->logical_device.getSwapchainImagesKHR(this->swapchain);
+        this->image_views = crow::make_image_views(
+            &this->logical_device, &this->swapchain_images, color_format);
+        this->swapchain_fences = crow::make_swapchain_fences(
+            &this->logical_device, &this->swapchain_images);
 
-        this->vk_cmd_pool_compute = crow::make_command_pool(
-            &this->vk_logical_device, compute_queue_index);
-        this->vk_cmd_buffer_compute = crow::alloc_command_buffer(
-            &this->vk_logical_device, &this->vk_cmd_pool_compute);
-        this->vk_cmd_pool_rasterize = crow::make_command_pool(
-            &this->vk_logical_device, rasterization_queue_index);
-        this->vk_cmd_buffer_rasterize = crow::alloc_command_buffer(
-            &this->vk_logical_device, &this->vk_cmd_pool_rasterize);
+        this->cmd_pool_compute =
+            crow::make_command_pool(&this->logical_device, compute_queue_index);
+        this->cmd_buffer_compute = crow::alloc_command_buffer(
+            &this->logical_device, &this->cmd_pool_compute);
+        this->cmd_pool_rasterize = crow::make_command_pool(
+            &this->logical_device, rasterization_queue_index);
+        this->cmd_buffer_rasterize = crow::alloc_command_buffer(
+            &this->logical_device, &this->cmd_pool_rasterize);
 
-        this->render_pass = crow::make_render_pass(&this->vk_logical_device,
+        this->render_pass = crow::make_render_pass(&this->logical_device,
                                                    color_format, depth_format);
     } catch (std::exception& e) {
         // TODO: Set up fmt::
@@ -125,21 +125,21 @@ void game::loop() {
             }
         }
     }
-    crow::render();
+    this->render();
 }
 
 void game::destroy() const {
-    for (auto const& fence : this->vk_swapchain_fences) {
-        this->vk_logical_device.destroy(fence);
+    for (auto const& fence : this->swapchain_fences) {
+        this->logical_device.destroy(fence);
     }
-    this->vk_logical_device.destroy(this->vk_cmd_pool_compute);
-    for (auto const& image_view : this->vk_image_views) {
-        this->vk_logical_device.destroyImageView(image_view);
+    this->logical_device.destroy(this->cmd_pool_compute);
+    for (auto const& image_view : this->image_views) {
+        this->logical_device.destroyImageView(image_view);
     }
-    this->vk_logical_device.destroySwapchainKHR();
-    this->vk_logical_device.destroyRenderPass(this->render_pass);
-    this->vk_logical_device.destroy();
-    this->vk_instance.destroySurfaceKHR(this->vk_surface);
+    this->logical_device.destroySwapchainKHR();
+    this->logical_device.destroyRenderPass(this->render_pass);
+    this->logical_device.destroy();
+    this->vk_instance.destroySurfaceKHR(this->surface);
     this->vk_instance.destroy();
     SDL_DestroyWindow(this->p_window);
     SDL_Quit();
