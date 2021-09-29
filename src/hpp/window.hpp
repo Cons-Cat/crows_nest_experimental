@@ -26,6 +26,7 @@ struct game {
     std::vector<vk::ImageView> image_views;
     std::vector<vk::Fence> swapchain_fences;
     std::vector<vk::Framebuffer> framebuffers;
+    std::array<vk::ImageView, 1> attachments;
     vk::RenderPass render_pass;
     vk::CommandPool cmd_pool_compute;
     vk::CommandPool cmd_pool_rasterize;

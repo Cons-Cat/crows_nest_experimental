@@ -357,56 +357,59 @@ inline auto make_swapchain_fences(vk::Device* p_logical_device,
 inline auto make_render_pass(vk::Device* p_logical_device,
                              vk::Format color_format, vk::Format depth_format)
     -> vk::RenderPass {
-    std::array<vk::AttachmentDescription, 2> attachment_descriptions;
+    std::array<vk::AttachmentDescription, 1> attachment_descriptions;
     attachment_descriptions[0] = vk::AttachmentDescription(
         vk::AttachmentDescriptionFlags(), color_format,
         vk::SampleCountFlagBits::e1, vk::AttachmentLoadOp::eClear,
         vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
         vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined,
         vk::ImageLayout::ePresentSrcKHR);
-    attachment_descriptions[1] = vk::AttachmentDescription(
-        vk::AttachmentDescriptionFlags(), depth_format,
-        vk::SampleCountFlagBits::e1, vk::AttachmentLoadOp::eClear,
-        vk::AttachmentStoreOp::eDontCare, vk::AttachmentLoadOp::eDontCare,
-        vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined,
-        vk::ImageLayout::eDepthStencilAttachmentOptimal);
+    // attachment_descriptions[1] = vk::AttachmentDescription(
+    //     vk::AttachmentDescriptionFlags(), depth_format,
+    //     vk::SampleCountFlagBits::e1, vk::AttachmentLoadOp::eClear,
+    //     vk::AttachmentStoreOp::eDontCare, vk::AttachmentLoadOp::eDontCare,
+    //     vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined,
+    //     vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
     vk::AttachmentReference color_reference(
         0, vk::ImageLayout::eColorAttachmentOptimal);
-    vk::AttachmentReference depth_reference(
-        1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+    // vk::AttachmentReference depth_reference(
+    //     1, vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
     vk::SubpassDescription subpass(vk::SubpassDescriptionFlags(),
                                    vk::PipelineBindPoint::eGraphics, {},
-                                   color_reference, {}, &depth_reference);
+                                   color_reference, {}, VK_NULL_HANDLE);
 
     return p_logical_device->createRenderPass(vk::RenderPassCreateInfo(
         vk::RenderPassCreateFlags(), attachment_descriptions, subpass));
 }
 
-inline void update_render_pass(vk::Device* p_logical_device,
-                               vk::RenderPass* p_render_pass,
-                               vk::Format color_format,
-                               vk::Format depth_format) {
-    p_logical_device->destroyRenderPass(*p_render_pass);
-    *p_render_pass =
-        crow::make_render_pass(p_logical_device, color_format, depth_format);
-}
+// inline void update_render_pass(vk::Device* p_logical_device,
+//                                vk::RenderPass* p_render_pass,
+//                                vk::Format color_format,
+//                                vk::Format depth_format) {
+//     p_logical_device->destroyRenderPass(*p_render_pass);
+//     *p_render_pass =
+//         crow::make_render_pass(p_logical_device, color_format, depth_format);
+// }
 
 inline auto make_framebuffers(
-    vk::Device* /*p_logical_device*/,
-    std::vector<vk::ImageView>* p_swapchain_image_views)
+    vk::Device* p_logical_device, vk::RenderPass* p_render_pass,
+    vk::Extent2D extent, std::vector<vk::ImageView>* p_swapchain_image_views)
     -> std::vector<vk::Framebuffer> {
     std::vector<vk::Framebuffer> framebuffers;
-    framebuffers.resize(p_swapchain_image_views->size());
+    framebuffers.reserve(p_swapchain_image_views->size());
+    std::array<vk::ImageView, 1> attachments;
+    vk::FramebufferCreateInfo framebuffer_info(vk::FramebufferCreateFlags(),
+                                               *p_render_pass, attachments,
+                                               extent.width, extent.height, 1);
 
-    std::vector<vk::ImageView> attachments{};
-    attachments.reserve(framebuffers.size());
-    for (int i = 0; i < framebuffers.size(); i++) {
-        attachments.emplace_back((*p_swapchain_image_views)[i]);
+    for (auto const& image_view : *p_swapchain_image_views) {
+        attachments[0] = image_view;
+        framebuffers.push_back(
+            p_logical_device->createFramebuffer(framebuffer_info));
     }
-    // vk::FramebufferCreateInfo framebuffer_info(vk::FramebufferCreateFlags(),
-    //                                            *p_render_pass, );
+
     return framebuffers;
 }
 
