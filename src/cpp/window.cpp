@@ -135,14 +135,22 @@ void game::loop() {
 
 void game::destroy() const {
     for (auto const& fence : this->swapchain_fences) {
-        this->logical_device.destroy(fence);
+        this->logical_device.destroyFence(fence);
     }
-    this->logical_device.destroy(this->cmd_pool_compute);
+
+    // Destroying command pools also destroys the command buffers they
+    // allocated.
+    this->logical_device.destroyCommandPool(this->cmd_pool_compute);
+    this->logical_device.destroyCommandPool(this->cmd_pool_rasterize);
+
     for (auto const& image_view : this->swapchain_image_views) {
         this->logical_device.destroyImageView(image_view);
     }
-    this->logical_device.destroySwapchainKHR();
+    for (auto const& framebuffer : this->framebuffers) {
+        this->logical_device.destroyFramebuffer(framebuffer);
+    }
     this->logical_device.destroyRenderPass(this->render_pass);
+    this->logical_device.destroySwapchainKHR();
     this->logical_device.destroy();
     this->vk_instance.destroySurfaceKHR(this->surface);
     this->vk_instance.destroy();
