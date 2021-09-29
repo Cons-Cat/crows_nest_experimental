@@ -40,13 +40,12 @@ void game::initialize() {
             throw std::runtime_error(SDL_GetError());
         }
         this->surface = vk::SurfaceKHR(p_temp_surface);
-        vk::PhysicalDevice vk_physical_device =
-            crow::find_vk_physical_device(&this->vk_instance);
+        this->physical_device = crow::find_physical_device(&this->vk_instance);
 
         // TODO: More precise device features query.
         // crow::make_vk_features();  // This mutates global::device_features
         // this->vk_features = global::device_features.features_basic;
-        auto supported_features = vk_physical_device.getFeatures2<
+        auto supported_features = this->physical_device.getFeatures2<
             vk::PhysicalDeviceFeatures2,
             vk::PhysicalDeviceAccelerationStructureFeaturesKHR,
             vk::PhysicalDeviceBufferDeviceAddressFeaturesKHR,
@@ -58,15 +57,15 @@ void game::initialize() {
             crow::make_vk_device_extensions();
         auto const& [rasterization_queue_index, presentation_queue_index,
                      compute_queue_index] =
-            crow::make_vk_queue_indices(&vk_physical_device, &this->surface);
+            crow::make_vk_queue_indices(&this->physical_device, &this->surface);
         this->logical_device = crow::make_vk_logical_device(
-            &vk_physical_device, &vk_instance, &this->surface,
+            &this->physical_device, &vk_instance, &this->surface,
             device_extensions, rasterization_queue_index, compute_queue_index);
         // TODO: Prove that BGRA-SRGB is supported.
         vk::Format color_format = vk::Format::eB8G8R8A8Srgb;
         vk::Format depth_format = vk::Format::eD16Unorm;
         vk::SurfaceCapabilitiesKHR surface_capabilities =
-            vk_physical_device.getSurfaceCapabilitiesKHR(this->surface);
+            this->physical_device.getSurfaceCapabilitiesKHR(this->surface);
         // TODO: FIFO is guaranteed by the spec to be available. But mailbox may
         // be preferable if it is present.
         vk::PresentModeKHR present_mode = vk::PresentModeKHR::eFifo;
@@ -86,7 +85,7 @@ void game::initialize() {
                                            static_cast<uint32_t>(height)};
 
         this->swapchain = crow::make_vk_swapchain(
-            this->logical_device, vk_physical_device, this->surface,
+            this->logical_device, this->physical_device, this->surface,
             window_extent, color_format, present_mode,
             rasterization_queue_index, presentation_queue_index);
 
@@ -130,6 +129,42 @@ void game::loop() {
             }
         }
     }
+
+    // uint32_t temp_buffer_data = 8;
+    // vk::Buffer temp_buffer = this->logical_device.createBuffer(
+    //     vk::BufferCreateInfo(vk::BufferCreateFlags(),
+    //     sizeof(temp_buffer_data),
+    //                          vk::BufferUsageFlagBits::eStorageBuffer));
+    // vk::MemoryRequirements memory_requirements =
+    //     this->logical_device.getBufferMemoryRequirements(temp_buffer);
+    // /*
+    //  There are several types of memory that can be allocated, and we must
+    //  choose a memory type that:
+
+    //  1) Satisfies the memory requirements(memoryRequirements.memoryTypeBits).
+
+    //  2) Satifies our own usage requirements. We want to be able to read the
+    //  buffer memory from the GPU to the CPU with vkMapMemory, so we set
+    //  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT.
+
+    //  Also, by setting VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, memory written by
+    //  the device(GPU) will be easily visible to the host(CPU), without having
+    //  to call any extra flushing commands. So mainly for convenience, we set
+    //  this flag.
+    //  */
+    // uint32_t memory_type_index =
+    //     crow::find_memory_type(this->physical_device.getMemoryProperties(),
+    //                            memory_requirements.memoryTypeBits,
+    //                            vk::MemoryPropertyFlagBits::eHostVisible |
+    //                                vk::MemoryPropertyFlagBits::eHostCoherent);
+    // vk::DeviceMemory device_memory = this->logical_device.allocateMemory(
+    //     vk::MemoryAllocateInfo(memory_requirements.size, memory_type_index));
+    // uint8_t* p_data = static_cast<uint8_t*>(this->logical_device.mapMemory(
+    //     device_memory, 0, memory_requirements.size));
+    // memcpy(p_data, &temp_buffer_data, sizeof(temp_buffer_data));
+    // this->logical_device.unmapMemory(device_memory);
+    // this->logical_device.bindBufferMemory(temp_buffer, device_memory, 0);
+
     this->render();
 }
 

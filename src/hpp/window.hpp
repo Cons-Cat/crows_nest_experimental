@@ -16,6 +16,7 @@ struct game {
     SDL_Window* p_window{};
     vk::Instance vk_instance;
     vk::Device logical_device;
+    vk::PhysicalDevice physical_device;
     vk::SurfaceKHR surface;
     vk::PhysicalDeviceFeatures2 physical_features;
     uint32_t window_width;

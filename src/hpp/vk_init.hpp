@@ -92,7 +92,7 @@ inline auto make_vk_device_extensions() -> std::vector<char const*> {
     return extension_names;
 }
 
-inline auto find_vk_physical_device(vk::Instance* p_instance)
+inline auto find_physical_device(vk::Instance* p_instance)
     -> vk::PhysicalDevice {
     // TODO: Check all video cards and find ideal one.
     vk::PhysicalDevice capable_physical_device = VK_NULL_HANDLE;
@@ -443,6 +443,22 @@ inline auto alloc_cmd_buffers(vk::Device* p_logical_device,
                      .front();
     }
     return cmd_buffers;
+}
+
+inline auto find_memory_type(
+    vk::PhysicalDeviceMemoryProperties const& memory_properties,
+    uint32_t typeBits, vk::MemoryPropertyFlags requirements_mask) -> uint32_t {
+    uint32_t type_index = uint32_t(~0);
+    for (uint32_t i = 0; i < memory_properties.memoryTypeCount; i++) {
+        if (((typeBits & 1) != 0u) &&
+            ((memory_properties.memoryTypes[i].propertyFlags &
+              requirements_mask) == requirements_mask)) {
+            type_index = i;
+            break;
+        }
+        typeBits >>= 1;
+    }
+    return type_index;
 }
 
 }  // namespace crow
