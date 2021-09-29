@@ -92,7 +92,7 @@ void game::initialize() {
 
         this->swapchain_images =
             this->logical_device.getSwapchainImagesKHR(this->swapchain);
-        this->image_views = crow::make_image_views(
+        this->swapchain_image_views = crow::make_image_views(
             &this->logical_device, &this->swapchain_images, color_format);
         this->swapchain_fences = crow::make_swapchain_fences(
             &this->logical_device, &this->swapchain_images);
@@ -110,10 +110,9 @@ void game::initialize() {
 
         this->render_pass = crow::make_render_pass(&this->logical_device,
                                                    color_format, depth_format);
-        // std::array<vk::ImageView, 1> attachments;
         this->framebuffers = crow::make_framebuffers(
             &this->logical_device, &this->render_pass, window_extent,
-            &this->image_views, &this->attachments);
+            &this->swapchain_image_views, &this->attachments);
     } catch (std::exception& e) {
         // TODO: Set up fmt::
         std::cerr << e.what() << "\n";
@@ -139,7 +138,7 @@ void game::destroy() const {
         this->logical_device.destroy(fence);
     }
     this->logical_device.destroy(this->cmd_pool_compute);
-    for (auto const& image_view : this->image_views) {
+    for (auto const& image_view : this->swapchain_image_views) {
         this->logical_device.destroyImageView(image_view);
     }
     this->logical_device.destroySwapchainKHR();

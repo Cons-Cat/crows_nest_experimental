@@ -297,12 +297,13 @@ inline auto make_image_views(vk::Device* p_logical_device,
         vk::ComponentSwizzle::eB, vk::ComponentSwizzle::eA);
     vk::ImageSubresourceRange sub_resource_range(
         vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
-    for (auto image : *p_swapchain_images) {
+    for (int i = 0; i < image_views.size(); i++) {
         vk::ImageViewCreateInfo image_view_create_info(
-            vk::ImageViewCreateFlags(), image, vk::ImageViewType::e2D, format,
-            component_mapping, sub_resource_range);
-        image_views.push_back(
-            p_logical_device->createImageView(image_view_create_info));
+            vk::ImageViewCreateFlags(), (*p_swapchain_images)[i],
+            vk::ImageViewType::e2D, format, component_mapping,
+            sub_resource_range);
+        image_views[i] =
+            (p_logical_device->createImageView(image_view_create_info));
     }
     return image_views;
 }
@@ -403,6 +404,10 @@ inline auto make_framebuffers(
                                                extent.width, extent.height, 1);
 
     for (auto const& image_view : *p_swapchain_image_views) {
+        // Mutating the attachments implicitly changes the state of
+        // framebuffer_info, since it points to the attachments array. Thus,
+        // every instantiation of a framebuffer here points to a different image
+        // view in the swapchain.
         (*p_attachments)[0] = image_view;
         framebuffers.push_back(
             p_logical_device->createFramebuffer(framebuffer_info));

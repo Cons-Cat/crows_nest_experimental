@@ -23,7 +23,7 @@ struct game {
     vk::Extent2D window_extent;
     vk::SwapchainKHR swapchain;
     std::vector<vk::Image> swapchain_images;
-    std::vector<vk::ImageView> image_views;
+    std::vector<vk::ImageView> swapchain_image_views;
     std::vector<vk::Fence> swapchain_fences;
     std::vector<vk::Framebuffer> framebuffers;
     std::array<vk::ImageView, 1> attachments;
