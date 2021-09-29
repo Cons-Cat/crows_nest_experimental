@@ -101,6 +101,10 @@ void game::initialize() {
             &this->vk_logical_device, compute_queue_index);
         this->vk_cmd_buffer_compute = crow::alloc_command_buffer(
             &this->vk_logical_device, &this->vk_cmd_pool_compute);
+        this->vk_cmd_pool_rasterize = crow::make_command_pool(
+            &this->vk_logical_device, rasterization_queue_index);
+        this->vk_cmd_buffer_rasterize = crow::alloc_command_buffer(
+            &this->vk_logical_device, &this->vk_cmd_pool_rasterize);
 
         this->render_pass = crow::make_render_pass(&this->vk_logical_device,
                                                    color_format, depth_format);
@@ -139,6 +143,9 @@ void game::destroy() const {
     this->vk_instance.destroy();
     SDL_DestroyWindow(this->p_window);
     SDL_Quit();
+}
+
+void game::record_clear_raster(vk::CommandBuffer* p_cmd_buffer) {
 }
 
 }  // namespace crow
