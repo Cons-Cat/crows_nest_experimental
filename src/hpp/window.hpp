@@ -30,8 +30,9 @@ struct game {
     vk::RenderPass render_pass;
     vk::CommandPool cmd_pool_compute;
     vk::CommandPool cmd_pool_rasterize;
-    vk::CommandBuffer cmd_buffer_compute;
-    vk::CommandBuffer cmd_buffer_rasterize;
+    // One cmd buffer is required per pool per swap frame.
+    std::vector<vk::CommandBuffer> cmd_buffers_compute;
+    std::vector<vk::CommandBuffer> cmd_buffers_rasterize;
 
     enum struct queue : uint32_t {
         compute,

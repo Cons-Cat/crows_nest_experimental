@@ -291,8 +291,7 @@ inline auto make_vk_swapchain(
 inline auto make_image_views(vk::Device* p_logical_device,
                              std::vector<vk::Image>* p_swapchain_images,
                              vk::Format format) {
-    std::vector<vk::ImageView> image_views;
-    image_views.reserve(p_swapchain_images->size());
+    std::vector<vk::ImageView> image_views(p_swapchain_images->size());
     vk::ComponentMapping component_mapping(
         vk::ComponentSwizzle::eR, vk::ComponentSwizzle::eG,
         vk::ComponentSwizzle::eB, vk::ComponentSwizzle::eA);
@@ -346,8 +345,7 @@ inline auto make_swapchain_fences(vk::Device* p_logical_device,
                                   std::vector<vk::Image>* p_swapchain_images)
     -> std::vector<vk::Fence> {
     vk::FenceCreateInfo fence_create_info(vk::FenceCreateFlagBits::eSignaled);
-    std::vector<vk::Fence> fences;
-    fences.resize(p_swapchain_images->size());
+    std::vector<vk::Fence> fences(p_swapchain_images->size());
     for (auto& fence : fences) {
         fence = p_logical_device->createFence(fence_create_info);
     }
@@ -413,20 +411,24 @@ inline auto make_framebuffers(
     return framebuffers;
 }
 
-inline auto make_command_pool(vk::Device* p_logical_device,
-                              uint32_t queue_family_index) -> vk::CommandPool {
+inline auto make_cmd_pool(vk::Device* p_logical_device,
+                          uint32_t queue_family_index) -> vk::CommandPool {
     vk::CommandPoolCreateInfo cmd_pool_info(vk::CommandPoolCreateFlags(),
                                             queue_family_index);
     return p_logical_device->createCommandPool(cmd_pool_info);
 }
 
-inline auto alloc_command_buffer(vk::Device* p_logical_device,
-                                 vk::CommandPool* p_cmd_pool)
-    -> vk::CommandBuffer {
-    return p_logical_device
-        ->allocateCommandBuffers(vk::CommandBufferAllocateInfo(
-            *p_cmd_pool, vk::CommandBufferLevel::ePrimary, 1))
-        .front();
+inline auto alloc_cmd_buffers(vk::Device* p_logical_device,
+                              uint32_t frame_count, vk::CommandPool* p_cmd_pool)
+    -> std::vector<vk::CommandBuffer> {
+    std::vector<vk::CommandBuffer> cmd_buffers(frame_count);
+    for (auto& buffer : cmd_buffers) {
+        buffer = p_logical_device
+                     ->allocateCommandBuffers(vk::CommandBufferAllocateInfo(
+                         *p_cmd_pool, vk::CommandBufferLevel::ePrimary, 1))
+                     .front();
+    }
+    return cmd_buffers;
 }
 
 }  // namespace crow

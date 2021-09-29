@@ -98,13 +98,15 @@ void game::initialize() {
             &this->logical_device, &this->swapchain_images);
 
         this->cmd_pool_compute =
-            crow::make_command_pool(&this->logical_device, compute_queue_index);
-        this->cmd_buffer_compute = crow::alloc_command_buffer(
-            &this->logical_device, &this->cmd_pool_compute);
-        this->cmd_pool_rasterize = crow::make_command_pool(
+            crow::make_cmd_pool(&this->logical_device, compute_queue_index);
+        this->cmd_buffers_compute = crow::alloc_cmd_buffers(
+            &this->logical_device, this->swapchain_images.size(),
+            &this->cmd_pool_compute);
+        this->cmd_pool_rasterize = crow::make_cmd_pool(
             &this->logical_device, rasterization_queue_index);
-        this->cmd_buffer_rasterize = crow::alloc_command_buffer(
-            &this->logical_device, &this->cmd_pool_rasterize);
+        this->cmd_buffers_rasterize = crow::alloc_cmd_buffers(
+            &this->logical_device, this->swapchain_images.size(),
+            &this->cmd_pool_rasterize);
 
         this->render_pass = crow::make_render_pass(&this->logical_device,
                                                    color_format, depth_format);
