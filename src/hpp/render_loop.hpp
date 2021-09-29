@@ -1,7 +1,3 @@
 #pragma once
 
-namespace crow {
-
-void render();
-
-}
+namespace crow {}
