@@ -395,17 +395,17 @@ inline auto make_render_pass(vk::Device* p_logical_device,
 
 inline auto make_framebuffers(
     vk::Device* p_logical_device, vk::RenderPass* p_render_pass,
-    vk::Extent2D extent, std::vector<vk::ImageView>* p_swapchain_image_views)
+    vk::Extent2D extent, std::vector<vk::ImageView>* p_swapchain_image_views,
+    std::array<vk::ImageView, 1>* p_attachments)
     -> std::vector<vk::Framebuffer> {
     std::vector<vk::Framebuffer> framebuffers;
     framebuffers.reserve(p_swapchain_image_views->size());
-    std::array<vk::ImageView, 1> attachments;
     vk::FramebufferCreateInfo framebuffer_info(vk::FramebufferCreateFlags(),
-                                               *p_render_pass, attachments,
+                                               *p_render_pass, *p_attachments,
                                                extent.width, extent.height, 1);
 
     for (auto const& image_view : *p_swapchain_image_views) {
-        attachments[0] = image_view;
+        (*p_attachments)[0] = image_view;
         framebuffers.push_back(
             p_logical_device->createFramebuffer(framebuffer_info));
     }

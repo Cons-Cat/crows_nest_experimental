@@ -108,6 +108,10 @@ void game::initialize() {
 
         this->render_pass = crow::make_render_pass(&this->logical_device,
                                                    color_format, depth_format);
+        // std::array<vk::ImageView, 1> attachments;
+        this->framebuffers = crow::make_framebuffers(
+            &this->logical_device, &this->render_pass, window_extent,
+            &this->image_views, &this->attachments);
     } catch (std::exception& e) {
         // TODO: Set up fmt::
         std::cerr << e.what() << "\n";
