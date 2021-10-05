@@ -1,5 +1,6 @@
 #include "render_loop.hpp"
 
+#include "synchro.hpp"
 #include "vk_globals.hpp"
 #include "window.hpp"
 
@@ -25,9 +26,8 @@ void game::render() {
         // return;
     }
 
-    vk::Semaphore image_acquired_semaphore =
-        this->logical_device.createSemaphore(
-            vk::SemaphoreCreateInfo(vk::SemaphoreCreateFlags()));
+    vk::Semaphore timeline_semaphore =
+        create_timeline_semaphore(&(this->logical_device));
     auto color =
         vk::ClearValue(std::array<float, 4>({{0.2f, 0.2f, 1.2f, 0.2f}}));
     for (int i = 0; i < this->framebuffers.size(); i++) {
@@ -35,7 +35,7 @@ void game::render() {
         uint32_t current_buffer =
             this->logical_device
                 .acquireNextImageKHR(this->swapchain, fence_timeout_nanoseconds,
-                                     image_acquired_semaphore,
+                                     timeline_semaphore,
                                      // TODO: Fence
                                      nullptr)
                 .value;
@@ -59,7 +59,7 @@ void game::render() {
         //     this->logical_device.createFence(vk::FenceCreateInfo());
         vk::PipelineStageFlags wait_destination_stage_mask(
             vk::PipelineStageFlagBits::eColorAttachmentOutput);
-        vk::SubmitInfo submit_info(image_acquired_semaphore,
+        vk::SubmitInfo submit_info(timeline_semaphore,
                                    wait_destination_stage_mask, cmd_buf);
         vk::Fence draw_fence =
             this->logical_device.createFence(vk::FenceCreateInfo());
@@ -76,7 +76,8 @@ void game::render() {
             vk::PresentInfoKHR({}, this->swapchain, current_buffer));
         this->logical_device.waitIdle();
     }
-    // this->logical_device.destroySemaphore(image_acquired_semaphore);
+
+    logical_device.destroySemaphore(timeline_semaphore);
 }
 
 }  // namespace crow

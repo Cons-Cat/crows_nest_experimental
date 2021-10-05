@@ -41,4 +41,5 @@ target_sources(
   src/cpp/render_loop.cpp
   src/cpp/swapchain.cpp
   src/cpp/buffer.cpp
+  src/cpp/synchro.cpp
 )
