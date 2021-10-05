@@ -13,10 +13,11 @@ auto main(int /*argc*/, char* /*argv*/[]) -> int {
     crow::game game;
     try {
         game.initialize();
-    } catch (...) {
+        game.loop();
+        game.destroy();
+    } catch (std::exception& e) {
+        std::cerr << e.what() << "\n";
         std::exit(EXIT_FAILURE);
     };
-    game.loop();
-    game.destroy();
     std::exit(EXIT_SUCCESS);
 }
