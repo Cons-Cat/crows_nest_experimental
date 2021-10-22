@@ -17,7 +17,7 @@ auto main(int /*argc*/, char* /*argv*/[]) -> int {
         game.destroy();
     } catch (std::exception& e) {
         std::cerr << e.what() << "\n";
-        std::exit(EXIT_FAILURE);
+        return EXIT_FAILURE;
     };
-    std::exit(EXIT_SUCCESS);
+    return EXIT_SUCCESS;
 }
