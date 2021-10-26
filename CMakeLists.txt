@@ -7,6 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 project(raytracing CXX)
 
 find_package(Vulkan REQUIRED FATAL_ERROR)
+find_package(glfw3 3.3 REQUIRED FATAL_ERROR)
 
 add_executable(raytracing src/main.cpp)
 
