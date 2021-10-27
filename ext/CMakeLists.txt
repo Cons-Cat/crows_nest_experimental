@@ -1,2 +1,2 @@
-add_subdirectory(Vulkan-WSIWindow)
 add_subdirectory(tinyobjloader)
+add_subdirectory(STX)

@@ -6,6 +6,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 project(raytracing CXX)
 
+add_definitions(-DGLFW_INCLUDE_VULKAN)
+
 find_package(Vulkan REQUIRED FATAL_ERROR)
 find_package(glfw3 3.3 REQUIRED FATAL_ERROR)
 
@@ -21,7 +23,7 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ext)
 
 target_link_libraries(
   raytracing PRIVATE
-  WSIWindow
+  glfw PRIVATE
   ${Vulkan_LIBRARIES}
 )
 
@@ -29,4 +31,6 @@ target_link_libraries(
 
 target_sources(
   raytracing PRIVATE
-)
+  src/main.cpp
+  src/cpp/app.cpp
+  )
