@@ -44,10 +44,8 @@ void App::create_surface() {
         .apiVersion = VK_API_VERSION_1_2,
     };
 
-    uint32_t layer_count = 1;
-    char const** p_layer_names = new (std::nothrow) char const*;
-    std::span<char const*> layer_names{p_layer_names,
-                                       sizeof(char const*) * layer_count};
+    constexpr uint32_t layer_count = 1;
+    char const* layer_names[layer_count];
     layer_names[0] = "VK_LAYER_KHRONOS_validation";
 
     VkInstanceCreateInfo instance_create_info = {
@@ -56,7 +54,7 @@ void App::create_surface() {
         .flags = 0,
         .pApplicationInfo = &application_info,
         .enabledLayerCount = layer_count,
-        .ppEnabledLayerNames = layer_names.data(),
+        .ppEnabledLayerNames = layer_names,
         .enabledExtensionCount = extension_count,
         .ppEnabledExtensionNames = extension_names.data(),
     };
