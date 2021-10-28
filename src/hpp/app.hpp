@@ -6,6 +6,7 @@ struct App {
     // Basic things.
     VkInstance instance;
     VkPhysicalDevice physical_device;
+    VkPhysicalDeviceMemoryProperties memory_properties;
     VkDevice logical_device;
     VkFormat depth_format;
     VkCommandPool cmd_pool;

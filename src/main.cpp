@@ -20,6 +20,6 @@ auto main(int /*argc*/, char* /*argv*/[]) -> int {
     std::cout << "Hello, user!\n";
     App app;
     app.initialize();
-
+    
     return EXIT_SUCCESS;
 }
