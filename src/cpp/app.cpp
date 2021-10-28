@@ -1,20 +1,18 @@
 #include "app.hpp"
 
 #include <cstring>
-// #include <iostream>
 #include <span>
 #include <vulkan/vulkan_core.h>
 
-// NOLINTNEXTLINE
 static std::array<char, 500> key_down_index;
 
 static void key_callback(GLFWwindow* /*p_window*/, int key, int /*scancode*/,
                          int action, int /*mods*/) {
     if (action == GLFW_PRESS) {
-        key_down_index[key] = 1;  // NOLINT
+        key_down_index[key] = 1;
     }
     if (action == GLFW_RELEASE) {
-        key_down_index[key] = 0;  // NOLINT
+        key_down_index[key] = 0;
     }
 }
 
@@ -38,19 +36,12 @@ void App::create_surface() {
 
     VkApplicationInfo application_info = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+        .pNext = VK_NULL_HANDLE,
         .pApplicationName = "Raytracing Demo",
         .applicationVersion = VK_MAKE_VERSION(1, 0, 0),
         .pEngineName = "",
         .engineVersion = VK_MAKE_VERSION(1, 0, 0),
         .apiVersion = VK_API_VERSION_1_2,
-    };
-
-    VkInstanceCreateInfo instance_create_info = {
-        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-        .flags = 0,
-        .pApplicationInfo = &application_info,
-        .enabledExtensionCount = extension_count,
-        .ppEnabledExtensionNames = extension_names.data(),
     };
 
     uint32_t layer_count = 1;
@@ -59,8 +50,16 @@ void App::create_surface() {
                                        sizeof(char const*) * layer_count};
     layer_names[0] = "VK_LAYER_KHRONOS_validation";
 
-    instance_create_info.enabledLayerCount = layer_count;
-    instance_create_info.ppEnabledLayerNames = layer_names.data();
+    VkInstanceCreateInfo instance_create_info = {
+        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+        .pNext = VK_NULL_HANDLE,
+        .flags = 0,
+        .pApplicationInfo = &application_info,
+        .enabledLayerCount = layer_count,
+        .ppEnabledLayerNames = layer_names.data(),
+        .enabledExtensionCount = extension_count,
+        .ppEnabledExtensionNames = extension_names.data(),
+    };
 
     if (vkCreateInstance(&instance_create_info, nullptr, &this->instance) ==
         VK_SUCCESS) {
@@ -69,9 +68,6 @@ void App::create_surface() {
     if (glfwCreateWindowSurface(this->instance, this->window, nullptr,
                                 &this->surface) == VK_SUCCESS) {
     }
-
-    // std::cout << extension_names.size() << '\n';
-    // std::cout << layer_names.size() << '\n';
 }
 
 void App::initialize() {
@@ -79,7 +75,6 @@ void App::initialize() {
     this->render_loop();
 }
 
-// NOLINTNEXTLINE this cannot be static.
 void App::render_loop() {
     while (glfwWindowShouldClose(this->window) == 0) {
         glfwPollEvents();

@@ -27,10 +27,10 @@ target_link_libraries(
   ${Vulkan_LIBRARIES}
 )
 
-# target_compile_options(raytracing PRIVATE -fno-exceptions)
+target_compile_options(raytracing PRIVATE -fno-exceptions -Wpedantic -Wall -Wextra)
 
 target_sources(
   raytracing PRIVATE
   src/main.cpp
   src/cpp/app.cpp
-  )
+)
