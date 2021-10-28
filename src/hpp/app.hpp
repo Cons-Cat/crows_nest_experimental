@@ -90,7 +90,7 @@ struct App {
     void initialize();
     void render_loop();
 
-   private:
+  private:
     void create_surface();
     void create_physical_device();
     void create_logical_device();

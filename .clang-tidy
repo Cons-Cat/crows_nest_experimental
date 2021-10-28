@@ -1,7 +1,5 @@
 ---
-Checks:          'bugprone-*,google-*,-google-readability-todo
-#cppcoreguidelines-*,performance-*,misc-*,modernize-*,readability-*,-cppcoreguidelines-macro-usage,-cppcoreguidelines-avoid-magic-numbers,-readability-magic-numbers,-readability-uppercase-literal-suffix,-modernize-use-auto,-cppcoreguidelines-pro-type-union-access,-cppcoreguidelines-pro-type-reinterpret-cast,-misc-non-private-member-variables-in-classes
-'
+Checks:          'bugprone-*,google-*,-google-readability-todo,modernize-use-trailing-return-type'
 
 CheckOptions:
   - { key: readability-identifier-naming.VariableCase,                    value: lower_case }
