@@ -95,6 +95,14 @@ void App::create_physical_device() {
 void App::create_logical_device() {
     this->generic_queue_index = 0;
 
+    VkBool32 is_present_supported = 0;
+    vkGetPhysicalDeviceSurfaceSupportKHR(this->physical_device,
+                                         this->generic_queue_index,
+                                         this->surface, &is_present_supported);
+    if (is_present_supported == VK_FALSE) {
+        stx::panic("Surface presentation is not supported.");
+    }
+
     constexpr uint32_t device_enabled_extension_count = 12;
     char const* device_enabled_extension_names[device_enabled_extension_count] =
         {
@@ -181,10 +189,82 @@ void App::create_logical_device() {
                      &(this->generic_queue));
 }
 
+void App::create_swapchain() {
+    VkSurfaceCapabilitiesKHR surface_capabilities;
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+        this->physical_device, this->surface, &surface_capabilities);
+
+    uint32_t format_count = 0;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(this->physical_device, this->surface,
+                                         &format_count, nullptr);
+    VkSurfaceFormatKHR* p_surface_formats =
+        new (std::nothrow) VkSurfaceFormatKHR[format_count];
+
+    vkGetPhysicalDeviceSurfaceFormatsKHR(this->physical_device, this->surface,
+                                         &format_count, p_surface_formats);
+
+    uint32_t present_mode_count = 0;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(
+        this->physical_device, this->surface, &present_mode_count, nullptr);
+    VkPresentModeKHR* p_surface_present_modes =
+        new (std::nothrow) VkPresentModeKHR[present_mode_count];
+
+    vkGetPhysicalDeviceSurfacePresentModesKHR(
+        this->physical_device, this->surface, &present_mode_count,
+        p_surface_present_modes);
+
+    VkSurfaceFormatKHR surface_format = p_surface_formats[0];
+    VkPresentModeKHR present_mode = p_surface_present_modes[0];
+    VkExtent2D extent = surface_capabilities.currentExtent;
+
+    this->image_count = surface_capabilities.minImageCount + 1;
+    if (surface_capabilities.maxImageCount > 0 &&
+        this->image_count > surface_capabilities.maxImageCount) {
+        this->image_count = surface_capabilities.maxImageCount;
+    }
+
+    VkSwapchainCreateInfoKHR swapchain_create_info = {
+        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+        .surface = this->surface,
+        .minImageCount = this->image_count,
+        .imageFormat = surface_format.format,
+        .imageColorSpace = surface_format.colorSpace,
+        .imageExtent = extent,
+        .imageArrayLayers = 1,
+        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                      VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+    };
+
+    swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    swapchain_create_info.preTransform = surface_capabilities.currentTransform;
+    swapchain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    swapchain_create_info.presentMode = present_mode;
+    swapchain_create_info.clipped = VK_TRUE;
+    swapchain_create_info.oldSwapchain = VK_NULL_HANDLE;
+
+    if (vkCreateSwapchainKHR(this->logical_device, &swapchain_create_info,
+                             nullptr, &this->swapchain) != VK_SUCCESS) {
+        stx::panic("Failed to create a swapchain.");
+    }
+
+    vkGetSwapchainImagesKHR(this->logical_device, this->swapchain,
+                            &this->image_count, nullptr);
+    this->swapchain_images = new (std::nothrow) VkImage[image_count];
+    vkGetSwapchainImagesKHR(this->logical_device, this->swapchain,
+                            &this->image_count, this->swapchain_images);
+
+    this->swapchain_image_format = surface_format.format;
+
+    delete[] p_surface_formats;
+    delete[] p_surface_present_modes;
+}
+
 void App::initialize() {
     this->create_surface();
     this->create_physical_device();
     this->create_logical_device();
+    this->create_swapchain();
     this->render_loop();
 }
 
