@@ -2,6 +2,7 @@
 
 #include <cstring>
 #include <iostream>
+#include <limits>
 #include <span>
 #include <vulkan/vulkan_core.h>
 
@@ -94,9 +95,10 @@ void App::create_physical_device() {
 }
 
 void App::create_logical_device() {
-    this->graphics_queue_index = -1;
-    this->present_queue_index = -1;
-    this->compute_queue_index = -1;
+    uint32_t sentinel_queue = std::numeric_limits<uint32_t>::max();
+    this->graphics_queue_index = sentinel_queue;
+    this->present_queue_index = sentinel_queue;
+    this->compute_queue_index = sentinel_queue;
 
     constexpr uint32_t device_enabled_extension_count = 12;
     char const* device_enabled_extension_names[device_enabled_extension_count] =
@@ -124,13 +126,13 @@ void App::create_logical_device() {
     vkGetPhysicalDeviceQueueFamilyProperties(
         this->physical_device, &queue_family_count, p_queue_family_properties);
 
-    for (int x = 0; x < queue_family_count; x++) {
-        if (this->graphics_queue_index == -1 &&
+    for (uint32_t x = 0; x < queue_family_count; x++) {
+        if (this->graphics_queue_index == sentinel_queue &&
             p_queue_family_properties[x].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             this->graphics_queue_index = x;
         }
 
-        if (this->compute_queue_index == -1 &&
+        if (this->compute_queue_index == sentinel_queue &&
             p_queue_family_properties[x].queueFlags & VK_QUEUE_COMPUTE_BIT) {
             this->compute_queue_index = x;
         }
@@ -139,48 +141,47 @@ void App::create_logical_device() {
         vkGetPhysicalDeviceSurfaceSupportKHR(
             this->physical_device, x, this->surface, &is_present_supported);
 
-        if (this->present_queue_index == -1 && is_present_supported) {
+        if (this->present_queue_index == sentinel_queue &&
+            is_present_supported) {
             this->present_queue_index = x;
         }
 
-        if (this->graphics_queue_index != -1 &&
-            this->present_queue_index != -1 &&
-            this->compute_queue_index != -1) {
+        if (this->graphics_queue_index != sentinel_queue &&
+            this->present_queue_index != sentinel_queue &&
+            this->compute_queue_index != sentinel_queue) {
             break;
         }
     }
 
-    // std::cout << graphics_queue_index << ", " << present_queue_index << ", "
-    //           << compute_queue_index << "\n";
-
     float queue_priority = 1.0f;
     constexpr uint32_t device_queue_create_info_count = 3;
     VkDeviceQueueCreateInfo
-        device_queue_create_infos[device_queue_create_info_count];
-
-    device_queue_create_infos[0].sType =
-        VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    device_queue_create_infos[0].pNext = nullptr;
-    device_queue_create_infos[0].flags = 0;
-    device_queue_create_infos[0].queueFamilyIndex = this->graphics_queue_index;
-    device_queue_create_infos[0].queueCount = 1;
-    device_queue_create_infos[0].pQueuePriorities = &queue_priority;
-
-    device_queue_create_infos[1].sType =
-        VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    device_queue_create_infos[1].pNext = nullptr;
-    device_queue_create_infos[1].flags = 0;
-    device_queue_create_infos[1].queueFamilyIndex = this->present_queue_index;
-    device_queue_create_infos[1].queueCount = 1;
-    device_queue_create_infos[1].pQueuePriorities = &queue_priority;
-
-    device_queue_create_infos[2].sType =
-        VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    device_queue_create_infos[2].pNext = nullptr;
-    device_queue_create_infos[2].flags = 0;
-    device_queue_create_infos[2].queueFamilyIndex = this->compute_queue_index;
-    device_queue_create_infos[2].queueCount = 1;
-    device_queue_create_infos[2].pQueuePriorities = &queue_priority;
+        device_queue_create_infos[device_queue_create_info_count] = {
+            VkDeviceQueueCreateInfo{
+                .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0,
+                .queueFamilyIndex = this->graphics_queue_index,
+                .queueCount = 1,
+                .pQueuePriorities = &queue_priority,
+            },
+            VkDeviceQueueCreateInfo{
+                .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0,
+                .queueFamilyIndex = this->present_queue_index,
+                .queueCount = 1,
+                .pQueuePriorities = &queue_priority,
+            },
+            VkDeviceQueueCreateInfo{
+                .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0,
+                .queueFamilyIndex = this->compute_queue_index,
+                .queueCount = 1,
+                .pQueuePriorities = &queue_priority,
+            },
+        };
 
     VkPhysicalDeviceBufferDeviceAddressFeaturesEXT
         buffer_device_address_features = {
@@ -197,6 +198,10 @@ void App::create_logical_device() {
             VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
         .pNext = &buffer_device_address_features,
         .rayTracingPipeline = VK_TRUE,
+        .rayTracingPipelineShaderGroupHandleCaptureReplay = VK_FALSE,
+        .rayTracingPipelineShaderGroupHandleCaptureReplayMixed = VK_FALSE,
+        .rayTracingPipelineTraceRaysIndirect = VK_FALSE,
+        .rayTraversalPrimitiveCulling = VK_FALSE,
     };
 
     VkPhysicalDeviceAccelerationStructureFeaturesKHR
@@ -218,6 +223,7 @@ void App::create_logical_device() {
         .queueCreateInfoCount = device_queue_create_info_count,
         .pQueueCreateInfos = device_queue_create_infos,
         .enabledLayerCount = 0,
+        .ppEnabledLayerNames = nullptr,
         .enabledExtensionCount = device_enabled_extension_count,
         .ppEnabledExtensionNames = device_enabled_extension_names,
         .pEnabledFeatures = nullptr,
