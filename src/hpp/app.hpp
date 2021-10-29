@@ -12,12 +12,8 @@ struct App {
     VkFormat depth_format;
     VkCommandPool cmd_pool;
 
-    uint32_t graphics_queue_index;
-    uint32_t present_queue_index;
-    uint32_t compute_queue_index;
-    VkQueue graphics_queue;
-    VkQueue present_queue;
-    VkQueue compute_queue;
+    uint32_t generic_queue_index;
+    VkQueue generic_queue;
 
     // Window.
     bool prepared = false;
