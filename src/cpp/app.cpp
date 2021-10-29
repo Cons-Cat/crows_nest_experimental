@@ -1,7 +1,9 @@
 #include "app.hpp"
 
+#include <GLFW/glfw3.h>
 #include <array>
 #include <limits>
+#include <vulkan/vulkan_core.h>
 
 static std::array<char, 500> key_down_index;
 
@@ -272,4 +274,14 @@ void App::render_loop() {
     while (glfwWindowShouldClose(this->window) == 0) {
         glfwPollEvents();
     }
+}
+
+void App::free() {
+    delete swapchain_images;
+    vkDestroySwapchainKHR(this->logical_device, this->swapchain, nullptr);
+    vkDestroyDevice(this->logical_device, nullptr);
+    vkDestroySurfaceKHR(this->instance, this->surface, nullptr);
+    vkDestroyInstance(this->instance, nullptr);
+    glfwDestroyWindow(this->window);
+    glfwTerminate();
 }

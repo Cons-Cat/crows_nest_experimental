@@ -87,6 +87,7 @@ struct App {
     // Methods
     void initialize();
     void render_loop();
+    void free();
 
   private:
     void create_surface();
