@@ -1,5 +1,6 @@
 #pragma once
 #include <GLFW/glfw3.h>
+#include <stx/panic.h>
 #include <vulkan/vulkan.h>
 
 struct App {

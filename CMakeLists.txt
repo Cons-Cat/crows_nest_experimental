@@ -24,10 +24,11 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ext)
 target_link_libraries(
   raytracing PRIVATE
   glfw PRIVATE
+  stx PRIVATE
   ${Vulkan_LIBRARIES}
 )
 
-target_compile_options(raytracing PRIVATE -fno-exceptions -Wpedantic -Wall -Wextra)
+target_compile_options(raytracing PRIVATE -fno-exceptions -fno-rtti -Wpedantic -Wall -Wextra)
 
 target_sources(
   raytracing PRIVATE
