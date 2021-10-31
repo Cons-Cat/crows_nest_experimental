@@ -311,7 +311,6 @@ void App::create_storage_image() {
         .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
     };
 
-    // TODO: This can fail.
     if (vkCreateImage(this->logical_device, &image, nullptr,
                       &this->storage_image.image) != VK_SUCCESS) {
         stx::panic("Failed to create image!");
@@ -355,8 +354,10 @@ void App::create_storage_image() {
             },
     };
 
-    vkCreateImageView(this->logical_device, &color_image_view, nullptr,
-                      &this->storage_image.view);
+    if (vkCreateImageView(this->logical_device, &color_image_view, nullptr,
+                          &this->storage_image.view) != VK_SUCCESS) {
+        stx::panic("Failed to create an image view");
+    }
 }
 
 void App::initialize() {
