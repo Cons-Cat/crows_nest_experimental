@@ -5,6 +5,8 @@
 #include <limits>
 #include <vulkan/vulkan_core.h>
 
+#include "stx/panic.h"
+
 static std::array<char, 500> key_down_index;
 
 static void key_callback(GLFWwindow* /*p_window*/, int key, int /*scancode*/,
@@ -15,6 +17,22 @@ static void key_callback(GLFWwindow* /*p_window*/, int key, int /*scancode*/,
     if (action == GLFW_RELEASE) {
         key_down_index[key] = 0;
     }
+}
+
+static auto find_memory_type(uint32_t typeFilter,
+                             VkMemoryPropertyFlags properties,
+                             VkPhysicalDevice p_physicalDevice) -> uint32_t {
+    VkPhysicalDeviceMemoryProperties mem_properties;
+    vkGetPhysicalDeviceMemoryProperties(p_physicalDevice, &mem_properties);
+
+    for (uint32_t i = 0; i < mem_properties.memoryTypeCount; i++) {
+        if ((typeFilter & (1 << i)) &&
+            (mem_properties.memoryTypes[i].propertyFlags & properties) ==
+                properties) {
+            return i;
+        }
+    }
+    stx::panic("Failed to find a memory type!");
 }
 
 void App::create_surface() {
@@ -85,7 +103,7 @@ void App::create_physical_device() {
     this->physical_device = p_devices[1];
 
     if (this->physical_device == VK_NULL_HANDLE) {
-        stx::panic("Failed to select a physical device.");
+        stx::panic("Failed to select a physical device!");
     }
 
     vkGetPhysicalDeviceMemoryProperties(this->physical_device,
@@ -101,8 +119,8 @@ void App::create_logical_device() {
     vkGetPhysicalDeviceSurfaceSupportKHR(this->physical_device,
                                          this->generic_queue_index,
                                          this->surface, &is_present_supported);
-    if (is_present_supported == VK_FALSE) {
-        stx::panic("Surface presentation is not supported.");
+    if (is_present_supported != VK_TRUE) {
+        stx::panic("Surface presentation is not supported!");
     }
 
     constexpr uint32_t device_enabled_extension_count = 12;
@@ -229,8 +247,9 @@ void App::create_swapchain() {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .surface = this->surface,
         .minImageCount = this->image_count,
-        .imageFormat = surface_format.format,
-        .imageColorSpace = surface_format.colorSpace,
+        // TODO: UNORM might be better than SRGB.
+        .imageFormat = VK_FORMAT_B8G8R8A8_SRGB,
+        .imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
         .imageExtent = extent,
         .imageArrayLayers = 1,
         .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
@@ -238,16 +257,15 @@ void App::create_swapchain() {
     };
 
     swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
     swapchain_create_info.preTransform = surface_capabilities.currentTransform;
     swapchain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     swapchain_create_info.presentMode = present_mode;
     swapchain_create_info.clipped = VK_TRUE;
-    swapchain_create_info.oldSwapchain = VK_NULL_HANDLE;
+    swapchain_create_info.oldSwapchain = nullptr;
 
     if (vkCreateSwapchainKHR(this->logical_device, &swapchain_create_info,
                              nullptr, &this->swapchain) != VK_SUCCESS) {
-        stx::panic("Failed to create a swapchain.");
+        stx::panic("Failed to create a swapchain!");
     }
 
     vkGetSwapchainImagesKHR(this->logical_device, this->swapchain,
@@ -262,12 +280,92 @@ void App::create_swapchain() {
     delete[] p_surface_present_modes;
 }
 
+void App::create_cmd_pool() {
+    VkCommandPoolCreateInfo command_pool_create_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .queueFamilyIndex = this->generic_queue_index,
+    };
+
+    if (vkCreateCommandPool(this->logical_device, &command_pool_create_info,
+                            NULL, &this->cmd_pool) != VK_SUCCESS) {
+        stx::panic("Failed to create a command pool!");
+    }
+}
+
+void App::create_storage_image() {
+    VkImageCreateInfo image = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .format = this->swapchain_image_format,
+        .extent =
+            {
+                .width = this->width,
+                .height = this->height,
+                .depth = 1,
+            },
+        .mipLevels = 1,
+        .arrayLayers = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .tiling = VK_IMAGE_TILING_OPTIMAL,
+        .usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    };
+
+    // TODO: This can fail.
+    if (vkCreateImage(this->logical_device, &image, nullptr,
+                      &this->storage_image.image) != VK_SUCCESS) {
+        stx::panic("Failed to create image!");
+    }
+
+    VkMemoryRequirements mem_reqs;
+    vkGetImageMemoryRequirements(this->logical_device,
+                                 this->storage_image.image, &mem_reqs);
+
+    VkMemoryAllocateInfo memory_allocate_info = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .pNext = nullptr,
+        .allocationSize = mem_reqs.size,
+        .memoryTypeIndex = find_memory_type(mem_reqs.memoryTypeBits,
+                                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                            this->physical_device),
+    };
+
+    if (vkAllocateMemory(this->logical_device, &memory_allocate_info, nullptr,
+                         &this->storage_image.memory) != VK_SUCCESS) {
+        stx::panic("Faile to allocate image memory!");
+    }
+
+    if (vkBindImageMemory(this->logical_device, this->storage_image.image,
+                          this->storage_image.memory, 0) != VK_SUCCESS) {
+        stx::panic("Failed to bind image memory!");
+    }
+
+    VkImageViewCreateInfo color_image_view = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = this->storage_image.image,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = this->swapchain_image_format,
+        .subresourceRange =
+            {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+    };
+
+    vkCreateImageView(this->logical_device, &color_image_view, nullptr,
+                      &this->storage_image.view);
+}
+
 void App::initialize() {
     this->create_surface();
     this->create_physical_device();
     this->create_logical_device();
     this->create_swapchain();
-    this->render_loop();
+    this->create_cmd_pool();
+    this->create_storage_image();
 }
 
 void App::render_loop() {
@@ -277,6 +375,10 @@ void App::render_loop() {
 }
 
 void App::free() {
+    vkDestroyImageView(this->logical_device, this->storage_image.view, nullptr);
+    vkDestroyImage(this->logical_device, this->storage_image.image, nullptr);
+    vkFreeMemory(this->logical_device, this->storage_image.memory, nullptr);
+    vkDestroyCommandPool(this->logical_device, this->cmd_pool, nullptr);
     delete swapchain_images;
     vkDestroySwapchainKHR(this->logical_device, this->swapchain, nullptr);
     vkDestroyDevice(this->logical_device, nullptr);

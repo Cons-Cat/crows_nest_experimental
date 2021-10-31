@@ -28,6 +28,13 @@ struct App {
     VkImage* swapchain_images;
     VkFormat swapchain_image_format;
 
+    struct StorageImage {
+        VkDeviceMemory memory;
+        VkImage image;
+        VkImageView view;
+        VkFormat format;
+    } storage_image;
+
     VkSemaphore* image_available_semaphores;
     VkSemaphore* render_finished_semaphores;
     VkFence* in_flight_fences;
@@ -98,5 +105,7 @@ struct App {
     void create_vertex_buffer();
     void create_index_buffer();
     void create_material_buffer();
+    void create_storage_image();
     void create_textures();
+    void create_cmd_buffers();
 };
