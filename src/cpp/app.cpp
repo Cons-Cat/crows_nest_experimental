@@ -19,22 +19,6 @@ static void key_callback(GLFWwindow* /*p_window*/, int key, int /*scancode*/,
     }
 }
 
-static auto find_memory_type(uint32_t typeFilter,
-                             VkMemoryPropertyFlags properties,
-                             VkPhysicalDevice p_physicalDevice) -> uint32_t {
-    VkPhysicalDeviceMemoryProperties mem_properties;
-    vkGetPhysicalDeviceMemoryProperties(p_physicalDevice, &mem_properties);
-
-    for (uint32_t i = 0; i < mem_properties.memoryTypeCount; i++) {
-        if ((typeFilter & (1 << i)) &&
-            (mem_properties.memoryTypes[i].propertyFlags & properties) ==
-                properties) {
-            return i;
-        }
-    }
-    stx::panic("Failed to find a memory type!");
-}
-
 void App::create_surface() {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -360,13 +344,85 @@ void App::create_storage_image() {
     }
 }
 
+void App::load_every_pfn() {
+    vkGetBufferDeviceAddressKHR =
+        reinterpret_cast<PFN_vkGetBufferDeviceAddressKHR>(vkGetDeviceProcAddr(
+            this->logical_device, "vkGetBufferDeviceAddressKHR"));
+    vkCmdBuildAccelerationStructuresKHR =
+        reinterpret_cast<PFN_vkCmdBuildAccelerationStructuresKHR>(
+            vkGetDeviceProcAddr(this->logical_device,
+                                "vkCmdBuildAccelerationStructuresKHR"));
+    vkBuildAccelerationStructuresKHR =
+        reinterpret_cast<PFN_vkBuildAccelerationStructuresKHR>(
+            vkGetDeviceProcAddr(this->logical_device,
+                                "vkBuildAccelerationStructuresKHR"));
+    vkCreateAccelerationStructureKHR =
+        reinterpret_cast<PFN_vkCreateAccelerationStructureKHR>(
+            vkGetDeviceProcAddr(this->logical_device,
+                                "vkCreateAccelerationStructureKHR"));
+    vkDestroyAccelerationStructureKHR =
+        reinterpret_cast<PFN_vkDestroyAccelerationStructureKHR>(
+            vkGetDeviceProcAddr(this->logical_device,
+                                "vkDestroyAccelerationStructureKHR"));
+    vkGetAccelerationStructureBuildSizesKHR =
+        reinterpret_cast<PFN_vkGetAccelerationStructureBuildSizesKHR>(
+            vkGetDeviceProcAddr(this->logical_device,
+                                "vkGetAccelerationStructureBuildSizesKHR"));
+    vkGetAccelerationStructureDeviceAddressKHR =
+        reinterpret_cast<PFN_vkGetAccelerationStructureDeviceAddressKHR>(
+            vkGetDeviceProcAddr(this->logical_device,
+                                "vkGetAccelerationStructureDeviceAddressKHR"));
+    vkCmdTraceRaysKHR = reinterpret_cast<PFN_vkCmdTraceRaysKHR>(
+        vkGetDeviceProcAddr(this->logical_device, "vkCmdTraceRaysKHR"));
+    vkGetRayTracingShaderGroupHandlesKHR =
+        reinterpret_cast<PFN_vkGetRayTracingShaderGroupHandlesKHR>(
+            vkGetDeviceProcAddr(this->logical_device,
+                                "vkGetRayTracingShaderGroupHandlesKHR"));
+    vkCreateRayTracingPipelinesKHR =
+        reinterpret_cast<PFN_vkCreateRayTracingPipelinesKHR>(
+            vkGetDeviceProcAddr(this->logical_device,
+                                "vkCreateRayTracingPipelinesKHR"));
+}
+
+void App::create_blas() {
+    // Setup identity transform matrix
+    VkTransformMatrixKHR transform_matrix = {
+        1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f};
+}
+
+void App::create_tlas() {
+}
+
 void App::initialize() {
     this->create_surface();
     this->create_physical_device();
     this->create_logical_device();
+
+    // TODO: extract these.
+    this->ray_tracing_pipeline_properties.sType =
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
+    VkPhysicalDeviceProperties2 device_properties2{
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+        .pNext = &this->ray_tracing_pipeline_properties,
+    };
+    vkGetPhysicalDeviceProperties2(this->physical_device, &device_properties2);
+
+    // Get acceleration structure properties, which will be used later on in the
+    // sample
+    this->acceleration_structure_features.sType =
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+    VkPhysicalDeviceFeatures2 device_features2{
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+        .pNext = &this->acceleration_structure_features,
+    };
+    vkGetPhysicalDeviceFeatures2(this->physical_device, &device_features2);
+
+    this->load_every_pfn();
     this->create_swapchain();
     this->create_cmd_pool();
     this->create_storage_image();
+    this->create_blas();
+    this->create_tlas();
 }
 
 void App::render_loop() {

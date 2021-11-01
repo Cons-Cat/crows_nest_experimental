@@ -2,6 +2,7 @@
 #include <GLFW/glfw3.h>
 #include <stx/panic.h>
 #include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 struct App {
     // Basic things.
@@ -41,21 +42,25 @@ struct App {
     VkFence* images_in_flight;
     uint32_t current_frame;
 
-    // More complex things.
-    // VkPhysicalDeviceProperties device_properties;
-    // VkPhysicalDeviceFeatures device_features;
-    // VkPhysicalDeviceMemoryProperties device_memory_properties;
-    // VkPhysicalDeviceFeatures enabled_features{};
-    // std::vector<const char*> enabled_device_extensions;
-    // std::vector<const char*> enabled_instance_extensions;
-    // void* device_createp_next_chain = nullptr;
-
     //  Raytracing
-    VkBuffer index_buffer;
-    VkDeviceMemory index_buffer_memory;
-
+    struct Vertex {
+        float pos[3];
+    };
+    Vertex vertices[3] = {
+        {1.0f, 1.0f, 0.0f},
+        {-1.0f, 1.0f, 0.0f},
+        {0.0f, -1.0f, 0.0f},
+    };
     VkBuffer vertex_position_buffer;
     VkDeviceMemory vertex_position_buffer_memory;
+
+    uint32_t indices[3] = {
+        0,
+        1,
+        2,
+    };
+    VkBuffer index_buffer;
+    VkDeviceMemory index_buffer_memory;
 
     VkBuffer material_index_buffer;
     VkDeviceMemory material_index_buffer_memory;
@@ -63,13 +68,26 @@ struct App {
     VkBuffer material_buffer;
     VkDeviceMemory material_buffer_memory;
 
-    VkAccelerationStructureKHR bottom_level_acceleration_structure;
-    VkBuffer bottom_level_acceleration_structure_buffer;
-    VkDeviceMemory bottom_level_acceleration_structure_buffer_memory;
+    VkPhysicalDeviceRayTracingPipelinePropertiesKHR
+        ray_tracing_pipeline_properties;
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR
+        acceleration_structure_features;
+    VkPhysicalDeviceBufferDeviceAddressFeatures
+        enabled_buffer_device_addres_features;
+    VkPhysicalDeviceRayTracingPipelineFeaturesKHR
+        enabled_ray_tracing_pipeline_features;
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR
+        enabled_acceleration_structure_features;
 
-    VkAccelerationStructureKHR top_level_acceleration_structure;
-    VkBuffer top_level_acceleration_structure_buffer;
-    VkDeviceMemory top_level_acceleration_structure_buffer_memory;
+    VkAccelerationStructureKHR blas;
+    uint64_t blas_address;
+    VkBuffer blas_structure_buffer;
+    VkDeviceMemory blas_buffer_memory;
+
+    VkAccelerationStructureKHR tlas;
+    uint64_t tlas_address;
+    VkBuffer tlas_buffer;
+    VkDeviceMemory tlas_buffer_memory;
 
     VkImageView ray_trace_image_view;
     VkImage ray_trace_image;
@@ -91,6 +109,27 @@ struct App {
 
     VkCommandBuffer* command_buffers;
 
+    // Because these represent Vulkan functions, I will leave them in camelCase
+    // for now.
+    PFN_vkGetBufferDeviceAddressKHR vkGetBufferDeviceAddressKHR;  // NOLINT
+    PFN_vkCreateAccelerationStructureKHR
+        vkCreateAccelerationStructureKHR;  // NOLINT
+    PFN_vkDestroyAccelerationStructureKHR
+        vkDestroyAccelerationStructureKHR;  // NOLINT
+    PFN_vkGetAccelerationStructureBuildSizesKHR
+        vkGetAccelerationStructureBuildSizesKHR;  // NOLINT
+    PFN_vkGetAccelerationStructureDeviceAddressKHR
+        vkGetAccelerationStructureDeviceAddressKHR;  // NOLINT
+    PFN_vkCmdBuildAccelerationStructuresKHR
+        vkCmdBuildAccelerationStructuresKHR;  // NOLINT
+    PFN_vkBuildAccelerationStructuresKHR
+        vkBuildAccelerationStructuresKHR;     // NOLINT
+    PFN_vkCmdTraceRaysKHR vkCmdTraceRaysKHR;  // NOLINT
+    PFN_vkGetRayTracingShaderGroupHandlesKHR
+        vkGetRayTracingShaderGroupHandlesKHR;  // NOLINT
+    PFN_vkCreateRayTracingPipelinesKHR
+        vkCreateRayTracingPipelinesKHR;  // NOLINT
+
     // Methods
     void initialize();
     void render_loop();
@@ -108,4 +147,7 @@ struct App {
     void create_storage_image();
     void create_textures();
     void create_cmd_buffers();
+    void load_every_pfn();
+    void create_tlas();
+    void create_blas();
 };
