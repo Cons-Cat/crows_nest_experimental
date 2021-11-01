@@ -11,3 +11,8 @@ void create_buffer(VkDevice* p_logical_device,
                    VkBufferUsageFlags usageFlags,
                    VkMemoryPropertyFlags memoryPropertyFlags, VkDeviceSize size,
                    VkBuffer* p_buffer, VkDeviceMemory* p_memory, void* p_data);
+
+void copy_buffer(VkDevice* p_logical_device, VkCommandPool* p_cmd_pool,
+                 VkBuffer p_src_buffer, VkBuffer p_dst_buffer,
+                 VkDeviceSize size, VkCommandBuffer* p_cmd_buffer,
+                 VkQueue* p_queue);

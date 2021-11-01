@@ -9,6 +9,9 @@ struct AccelerationStructure {
     VkDeviceMemory memory;
     VkBuffer buffer;
 
-    void create_buffer(VkDevice& device, VkPhysicalDevice* p_physical_device,
-                       VkAccelerationStructureBuildSizesInfoKHR buildSizeInfo);
+    void create_buffer(VkDevice* p_logical_device,
+                       VkPhysicalDevice* p_physical_device, VkDeviceSize size,
+                       VkBufferUsageFlags usage_flags,
+                       VkMemoryPropertyFlags property_flags, VkBuffer* p_buffer,
+                       VkDeviceMemory* p_buffer_memory);
 };

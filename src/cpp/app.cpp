@@ -2,9 +2,11 @@
 
 #include <GLFW/glfw3.h>
 #include <array>
+#include <cstring>
 #include <limits>
 #include <vulkan/vulkan_core.h>
 
+#include "memory.hpp"
 #include "stx/panic.h"
 
 static std::array<char, 500> key_down_index;
@@ -382,6 +384,47 @@ void App::load_every_pfn() {
         reinterpret_cast<PFN_vkCreateRayTracingPipelinesKHR>(
             vkGetDeviceProcAddr(this->logical_device,
                                 "vkCreateRayTracingPipelinesKHR"));
+}
+
+void App::create_vertex_buffer() {
+    // TODO: Make this take a real mesh instead of a hard-coded triangle.
+    VkDeviceSize position_buffer_size = sizeof(App::Vertex) * 3;
+
+    VkBuffer p_position_staging_buffer;
+    VkDeviceMemory p_position_staging_buffer_memory;
+
+    create_buffer(&this->logical_device, &this->physical_device,
+                  VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                  position_buffer_size, &p_position_staging_buffer,
+                  &p_position_staging_buffer_memory,
+                  &this->vertex_position_buffer);
+
+    void* p_position_data;
+    vkMapMemory(this->logical_device, p_position_staging_buffer_memory, 0,
+                position_buffer_size, 0, &p_position_data);
+    memcpy(p_position_data, &this->vertices, position_buffer_size);
+    vkUnmapMemory(this->logical_device, p_position_staging_buffer_memory);
+
+    create_buffer(
+        &this->logical_device, &this->physical_device,
+        VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, position_buffer_size,
+        &vertex_position_buffer, &this->vertex_position_buffer_memory,
+        &this->vertex_position_buffer);
+
+    copy_buffer(&this->logical_device, &this->cmd_pool,
+                p_position_staging_buffer, this->vertex_position_buffer,
+                position_buffer_size, this->p_command_buffers,
+                &this->graphics_queue);
+
+    vkDestroyBuffer(this->logical_device, p_position_staging_buffer, nullptr);
+    vkFreeMemory(this->logical_device, p_position_staging_buffer_memory,
+                 nullptr);
 }
 
 void App::create_blas() {

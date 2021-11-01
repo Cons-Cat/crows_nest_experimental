@@ -14,7 +14,9 @@ struct App {
     VkCommandPool cmd_pool;
 
     uint32_t generic_queue_index;
-    VkQueue generic_queue;
+    VkQueue graphics_queue;
+    VkQueue present_queue;
+    VkQueue compute_queue;
 
     // Window.
     bool prepared = false;
@@ -107,7 +109,7 @@ struct App {
     VkBuffer shader_binding_table_buffer;
     VkDeviceMemory shader_binding_table_buffer_memory;
 
-    VkCommandBuffer* command_buffers;
+    VkCommandBuffer* p_command_buffers;
 
     // Because these represent Vulkan functions, I will leave them in camelCase
     // for now.
