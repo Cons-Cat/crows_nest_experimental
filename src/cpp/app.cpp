@@ -192,7 +192,11 @@ void App::create_logical_device() {
     }
 
     vkGetDeviceQueue(this->logical_device, this->generic_queue_index, 0,
-                     &(this->generic_queue));
+                     &this->present_queue);
+    vkGetDeviceQueue(this->logical_device, this->generic_queue_index, 0,
+                     &this->graphics_queue);
+    vkGetDeviceQueue(this->logical_device, this->generic_queue_index, 0,
+                     &this->compute_queue);
 }
 
 void App::create_swapchain() {
@@ -302,17 +306,17 @@ void App::create_storage_image() {
         stx::panic("Failed to create image!");
     }
 
-    VkMemoryRequirements mem_reqs;
-    vkGetImageMemoryRequirements(this->logical_device,
-                                 this->storage_image.image, &mem_reqs);
+    VkMemoryRequirements memory_requirements;
+    vkGetImageMemoryRequirements(
+        this->logical_device, this->storage_image.image, &memory_requirements);
 
     VkMemoryAllocateInfo memory_allocate_info = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .pNext = nullptr,
-        .allocationSize = mem_reqs.size,
-        .memoryTypeIndex = find_memory_type(mem_reqs.memoryTypeBits,
+        .allocationSize = memory_requirements.size,
+        .memoryTypeIndex = find_memory_type(memory_requirements.memoryTypeBits,
                                             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                                            this->physical_device),
+                                            &this->physical_device),
     };
 
     if (vkAllocateMemory(this->logical_device, &memory_allocate_info, nullptr,
