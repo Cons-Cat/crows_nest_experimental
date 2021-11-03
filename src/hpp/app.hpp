@@ -74,12 +74,8 @@ struct App {
         ray_tracing_pipeline_properties;
     VkPhysicalDeviceAccelerationStructureFeaturesKHR
         acceleration_structure_features;
-    VkPhysicalDeviceBufferDeviceAddressFeatures
-        enabled_buffer_device_addres_features;
-    VkPhysicalDeviceRayTracingPipelineFeaturesKHR
-        enabled_ray_tracing_pipeline_features;
-    VkPhysicalDeviceAccelerationStructureFeaturesKHR
-        enabled_acceleration_structure_features;
+    VkPhysicalDeviceBufferDeviceAddressFeatures buffer_device_address_features;
+    VkPhysicalDeviceRayTracingPipelineFeaturesKHR ray_tracing_pipeline_features;
 
     VkAccelerationStructureKHR blas;
     uint64_t blas_address;

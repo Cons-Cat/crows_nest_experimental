@@ -112,7 +112,7 @@ void App::create_logical_device() {
     constexpr uint32_t device_enabled_extension_count = 12;
     char const* device_enabled_extension_names[device_enabled_extension_count] =
         {
-            VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+            "VK_KHR_swapchain",
             "VK_KHR_ray_tracing_pipeline",
             "VK_KHR_acceleration_structure",
             "VK_KHR_spirv_1_4",
@@ -128,6 +128,7 @@ void App::create_logical_device() {
 
     float const queue_priority = 1.0f;
     constexpr uint32_t device_queue_create_info_count = 1;
+    // TODO: Move to struct?
     VkDeviceQueueCreateInfo
         device_queue_create_infos[device_queue_create_info_count] = {
             {
@@ -140,17 +141,16 @@ void App::create_logical_device() {
             },
         };
 
-    VkPhysicalDeviceBufferDeviceAddressFeaturesEXT
-        buffer_device_address_features = {
-            .sType =
-                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES_EXT,
-            .pNext = nullptr,
-            .bufferDeviceAddress = VK_TRUE,
-            .bufferDeviceAddressCaptureReplay = VK_FALSE,
-            .bufferDeviceAddressMultiDevice = VK_FALSE,
-        };
+    this->buffer_device_address_features = {
+        .sType =
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES_EXT,
+        .pNext = nullptr,
+        .bufferDeviceAddress = VK_TRUE,
+        .bufferDeviceAddressCaptureReplay = VK_FALSE,
+        .bufferDeviceAddressMultiDevice = VK_FALSE,
+    };
 
-    VkPhysicalDeviceRayTracingPipelineFeaturesKHR ray_tracing_pipeline_features = {
+    this->ray_tracing_pipeline_features = {
         .sType =
             VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
         .pNext = &buffer_device_address_features,
@@ -161,17 +161,17 @@ void App::create_logical_device() {
         .rayTraversalPrimitiveCulling = VK_FALSE,
     };
 
-    VkPhysicalDeviceAccelerationStructureFeaturesKHR
-        acceleration_structure_features = {
-            .sType =
-                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
-            .pNext = &ray_tracing_pipeline_features,
-            .accelerationStructure = VK_TRUE,
-            .accelerationStructureCaptureReplay = VK_TRUE,
-            .accelerationStructureIndirectBuild = VK_FALSE,
-            .accelerationStructureHostCommands = VK_FALSE,
-            .descriptorBindingAccelerationStructureUpdateAfterBind = VK_FALSE,
-        };
+    // VkPhysicalDeviceAccelerationStructureFeaturesKHR
+    this->acceleration_structure_features = {
+        .sType =
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
+        .pNext = &ray_tracing_pipeline_features,
+        .accelerationStructure = VK_TRUE,
+        .accelerationStructureCaptureReplay = VK_TRUE,
+        .accelerationStructureIndirectBuild = VK_FALSE,
+        .accelerationStructureHostCommands = VK_FALSE,
+        .descriptorBindingAccelerationStructureUpdateAfterBind = VK_FALSE,
+    };
 
     VkDeviceCreateInfo device_create_info = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -444,32 +444,13 @@ void App::initialize() {
     this->create_surface();
     this->create_physical_device();
     this->create_logical_device();
-
-    // TODO: extract these.
-    this->ray_tracing_pipeline_properties.sType =
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
-    VkPhysicalDeviceProperties2 device_properties2{
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
-        .pNext = &this->ray_tracing_pipeline_properties,
-    };
-    vkGetPhysicalDeviceProperties2(this->physical_device, &device_properties2);
-
-    // Get acceleration structure properties, which will be used later on in the
-    // sample
-    this->acceleration_structure_features.sType =
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
-    VkPhysicalDeviceFeatures2 device_features2{
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-        .pNext = &this->acceleration_structure_features,
-    };
-    vkGetPhysicalDeviceFeatures2(this->physical_device, &device_features2);
-
     this->load_every_pfn();
+
     this->create_swapchain();
     this->create_cmd_pool();
-    this->create_storage_image();
-    this->create_blas();
-    this->create_tlas();
+    // this->create_storage_image();
+    // this->create_blas();
+    // this->create_tlas();
 }
 
 void App::render_loop() {

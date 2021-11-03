@@ -10,13 +10,6 @@ struct RayTracingScratchBuffer {
     VkDeviceMemory memory = VK_NULL_HANDLE;
 };
 
-struct AccelerationStructure {
-    VkAccelerationStructureKHR handle;
-    uint64_t device_address = 0;
-    VkDeviceMemory memory;
-    VkBuffer buffer;
-};
-
 auto main(int /*argc*/, char* /*argv*/[]) -> int {
     std::cout << "Hello, user!\n";
     App app;

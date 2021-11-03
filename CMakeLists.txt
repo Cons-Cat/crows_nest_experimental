@@ -48,7 +48,7 @@ if (DEBUG)
     -Wpedantic -Wall -Wextra
     # Runtime checks
     # -fsanitize=address
-    -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow
+    # -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow
     )
 else()
   add_link_options(raytracing PUBLIC
@@ -69,4 +69,6 @@ target_sources(raytracing PRIVATE
   src/main.cpp
   src/hpp/app.hpp
   src/cpp/app.cpp
+  src/hpp/memory.hpp
+  src/cpp/memory.cpp
   )
