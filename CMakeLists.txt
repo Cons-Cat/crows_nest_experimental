@@ -45,10 +45,10 @@ if (DEBUG)
     # Debugging
     -ggdb -fno-omit-frame-pointer
     # Warnings
-    -Wpedantic -Wall -Wextra
+    #-Wpedantic -Wall -Wextra
     # Runtime checks
     # -fsanitize=address
-    # -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow
+    -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow
     )
 else()
   add_link_options(raytracing PUBLIC

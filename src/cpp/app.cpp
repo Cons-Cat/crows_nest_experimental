@@ -316,7 +316,7 @@ void App::create_storage_image() {
         .allocationSize = memory_requirements.size,
         .memoryTypeIndex = find_memory_type(memory_requirements.memoryTypeBits,
                                             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                                            &this->physical_device),
+                                            this->physical_device),
     };
 
     if (vkAllocateMemory(this->logical_device, &memory_allocate_info, nullptr,
@@ -397,7 +397,7 @@ void App::create_vertex_buffer() {
     VkBuffer p_position_staging_buffer;
     VkDeviceMemory p_position_staging_buffer_memory;
 
-    create_buffer(&this->logical_device, &this->physical_device,
+    create_buffer(this->logical_device, this->physical_device,
                   VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -412,7 +412,7 @@ void App::create_vertex_buffer() {
     vkUnmapMemory(this->logical_device, p_position_staging_buffer_memory);
 
     create_buffer(
-        &this->logical_device, &this->physical_device,
+        this->logical_device, this->physical_device,
         VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
             VK_BUFFER_USAGE_TRANSFER_DST_BIT |
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
@@ -421,20 +421,64 @@ void App::create_vertex_buffer() {
         &vertex_position_buffer, &this->vertex_position_buffer_memory,
         &this->vertex_position_buffer);
 
-    copy_buffer(&this->logical_device, &this->cmd_pool,
-                p_position_staging_buffer, this->vertex_position_buffer,
+    copy_buffer(this->logical_device, this->cmd_pool,
+                &p_position_staging_buffer, &this->vertex_position_buffer,
                 position_buffer_size, this->p_command_buffers,
-                &this->graphics_queue);
+                this->graphics_queue);
 
     vkDestroyBuffer(this->logical_device, p_position_staging_buffer, nullptr);
     vkFreeMemory(this->logical_device, p_position_staging_buffer_memory,
                  nullptr);
 }
 
+void App::create_index_buffer() {
+    // TODO: Take arbitrary mesh instead of hard-coded triangle.
+    uint32_t num_faces = 1;
+    VkDeviceSize buffer_size = sizeof(uint32_t) * num_faces;
+    uint32_t* p_position_indices = new (std::nothrow) uint32_t[3];
+    p_position_indices[0] = 0;
+    p_position_indices[1] = 1;
+    p_position_indices[2] = 2;
+
+    VkBuffer p_staging_buffer;
+    VkDeviceMemory p_staging_buffer_memory;
+    create_buffer(this->logical_device, this->physical_device,
+                  VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                  buffer_size, &p_staging_buffer, &p_staging_buffer_memory,
+                  p_position_indices);
+
+    void* p_data;
+    vkMapMemory(this->logical_device, p_staging_buffer_memory, 0, buffer_size,
+                0, &p_data);
+    memcpy(p_data, p_position_indices, buffer_size);
+    vkUnmapMemory(this->logical_device, p_staging_buffer_memory);
+
+    create_buffer(
+        this->logical_device, this->physical_device,
+        VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, buffer_size, &this->index_buffer,
+        &this->index_buffer_memory, nullptr);
+
+    copy_buffer(this->logical_device, this->cmd_pool, &p_staging_buffer,
+                &this->index_buffer, buffer_size, this->p_command_buffers,
+                this->graphics_queue);
+
+    vkDestroyBuffer(this->logical_device, p_staging_buffer, nullptr);
+    vkFreeMemory(this->logical_device, p_staging_buffer_memory, nullptr);
+
+    delete[] p_position_indices;
+}
+
 void App::create_blas() {
     // Setup identity transform matrix
     VkTransformMatrixKHR transform_matrix = {
-        1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f};
+        1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+    };
 }
 
 void App::create_tlas() {
@@ -448,9 +492,11 @@ void App::initialize() {
 
     this->create_swapchain();
     this->create_cmd_pool();
-    // this->create_storage_image();
-    // this->create_blas();
-    // this->create_tlas();
+    this->create_storage_image();
+    this->create_vertex_buffer();
+    this->create_index_buffer();
+    this->create_blas();
+    this->create_tlas();
 }
 
 void App::render_loop() {

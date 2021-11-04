@@ -146,6 +146,6 @@ struct App {
     void create_textures();
     void create_cmd_buffers();
     void load_every_pfn();
-    void create_tlas();
     void create_blas();
+    void create_tlas();
 };
