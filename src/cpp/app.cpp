@@ -401,9 +401,8 @@ void App::create_vertex_buffer() {
                   VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                  position_buffer_size, &p_position_staging_buffer,
-                  &p_position_staging_buffer_memory,
-                  &this->vertex_position_buffer);
+                  position_buffer_size, p_position_staging_buffer,
+                  &p_position_staging_buffer_memory);
 
     void* p_position_data;
     vkMapMemory(this->logical_device, p_position_staging_buffer_memory, 0,
@@ -418,12 +417,10 @@ void App::create_vertex_buffer() {
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
             VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, position_buffer_size,
-        &vertex_position_buffer, &this->vertex_position_buffer_memory,
-        &this->vertex_position_buffer);
+        vertex_position_buffer, &this->vertex_position_buffer_memory);
 
-    copy_buffer(this->logical_device, this->cmd_pool,
-                &p_position_staging_buffer, &this->vertex_position_buffer,
-                position_buffer_size, this->p_command_buffers,
+    copy_buffer(this->logical_device, this->cmd_pool, p_position_staging_buffer,
+                this->vertex_position_buffer, position_buffer_size,
                 this->graphics_queue);
 
     vkDestroyBuffer(this->logical_device, p_position_staging_buffer, nullptr);
@@ -446,8 +443,7 @@ void App::create_index_buffer() {
                   VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                  buffer_size, &p_staging_buffer, &p_staging_buffer_memory,
-                  p_position_indices);
+                  buffer_size, p_staging_buffer, &p_staging_buffer_memory);
 
     void* p_data;
     vkMapMemory(this->logical_device, p_staging_buffer_memory, 0, buffer_size,
@@ -461,12 +457,11 @@ void App::create_index_buffer() {
             VK_BUFFER_USAGE_TRANSFER_DST_BIT |
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
             VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, buffer_size, &this->index_buffer,
-        &this->index_buffer_memory, nullptr);
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, buffer_size, this->index_buffer,
+        &this->index_buffer_memory);
 
-    copy_buffer(this->logical_device, this->cmd_pool, &p_staging_buffer,
-                &this->index_buffer, buffer_size, this->p_command_buffers,
-                this->graphics_queue);
+    copy_buffer(this->logical_device, this->cmd_pool, p_staging_buffer,
+                this->index_buffer, buffer_size, this->graphics_queue);
 
     vkDestroyBuffer(this->logical_device, p_staging_buffer, nullptr);
     vkFreeMemory(this->logical_device, p_staging_buffer_memory, nullptr);
