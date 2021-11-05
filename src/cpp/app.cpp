@@ -472,7 +472,9 @@ void App::create_index_buffer() {
 void App::create_blas() {
     // Setup identity transform matrix
     VkTransformMatrixKHR transform_matrix = {
-        1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+        1.0f, 0.0f, 0.0f, 0.0f, // 
+		0.0f, 1.0f, 0.0f, 0.0f, //
+		0.0f, 0.0f, 1.0f, 0.0f, // 
     };
 }
 
@@ -507,13 +509,16 @@ void App::free() {
                  nullptr);
     vkDestroyBuffer(this->logical_device, this->index_buffer, nullptr);
     vkFreeMemory(this->logical_device, this->index_buffer_memory, nullptr);
+
     vkDestroyImageView(this->logical_device, this->storage_image.view, nullptr);
     vkDestroyImage(this->logical_device, this->storage_image.image, nullptr);
     vkFreeMemory(this->logical_device, this->storage_image.memory, nullptr);
-    vkDestroyCommandPool(this->logical_device, this->cmd_pool, nullptr);
     delete swapchain_images;
+
+    vkDestroyCommandPool(this->logical_device, this->cmd_pool, nullptr);
     vkDestroySwapchainKHR(this->logical_device, this->swapchain, nullptr);
     vkDestroyDevice(this->logical_device, nullptr);
+
     vkDestroySurfaceKHR(this->instance, this->surface, nullptr);
     vkDestroyInstance(this->instance, nullptr);
     glfwDestroyWindow(this->window);
