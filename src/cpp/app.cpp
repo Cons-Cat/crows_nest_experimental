@@ -501,6 +501,12 @@ void App::render_loop() {
 }
 
 void App::free() {
+    vkDestroyBuffer(this->logical_device, this->vertex_position_buffer,
+                    nullptr);
+    vkFreeMemory(this->logical_device, this->vertex_position_buffer_memory,
+                 nullptr);
+    vkDestroyBuffer(this->logical_device, this->index_buffer, nullptr);
+    vkFreeMemory(this->logical_device, this->index_buffer_memory, nullptr);
     vkDestroyImageView(this->logical_device, this->storage_image.view, nullptr);
     vkDestroyImage(this->logical_device, this->storage_image.image, nullptr);
     vkFreeMemory(this->logical_device, this->storage_image.memory, nullptr);
