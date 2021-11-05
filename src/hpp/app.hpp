@@ -79,7 +79,7 @@ struct App {
 
     VkAccelerationStructureKHR blas;
     uint64_t blas_address;
-    VkBuffer blas_structure_buffer;
+    VkBuffer blas_buffer;
     VkDeviceMemory blas_buffer_memory;
 
     VkAccelerationStructureKHR tlas;

@@ -472,10 +472,195 @@ void App::create_index_buffer() {
 void App::create_blas() {
     // Setup identity transform matrix
     VkTransformMatrixKHR transform_matrix = {
-        1.0f, 0.0f, 0.0f, 0.0f, // 
-		0.0f, 1.0f, 0.0f, 0.0f, //
-		0.0f, 0.0f, 1.0f, 0.0f, // 
+        1.0f, 0.0f, 0.0f, 0.0f,  //
+        0.0f, 1.0f, 0.0f, 0.0f,  //
+        0.0f, 0.0f, 1.0f, 0.0f,  //
     };
+
+    VkBufferDeviceAddressInfo vertex_buffer_device_address_info = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+        .buffer = this->vertex_position_buffer,
+    };
+
+    VkDeviceAddress vertex_buffer_address = vkGetBufferDeviceAddressKHR(
+        this->logical_device, &vertex_buffer_device_address_info);
+
+    VkDeviceOrHostAddressConstKHR vertex_device_or_host_address_const = {
+        .deviceAddress = vertex_buffer_address,
+    };
+
+    VkBufferDeviceAddressInfo index_buffer_device_address_info = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+        .buffer = this->index_buffer,
+    };
+
+    VkDeviceAddress index_buffer_address = vkGetBufferDeviceAddressKHR(
+        this->logical_device, &index_buffer_device_address_info);
+
+    VkDeviceOrHostAddressConstKHR index_device_or_host_address_const = {
+        .deviceAddress = index_buffer_address,
+    };
+
+    VkAccelerationStructureGeometryTrianglesDataKHR
+        acceleration_structure_geometry_triangles_data = {
+            .sType =
+                VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
+            .pNext = nullptr,
+            .vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
+            .vertexData = vertex_device_or_host_address_const,
+            .vertexStride = sizeof(Vertex),
+            .maxVertex = 3,  // TODO: Change this to mesh vertex count.
+            .indexType = VK_INDEX_TYPE_UINT32,
+            .indexData = index_device_or_host_address_const,
+            .transformData = (VkDeviceOrHostAddressConstKHR){},
+        };
+
+    VkAccelerationStructureGeometryDataKHR
+        acceleration_structure_geometry_data = {
+            .triangles = acceleration_structure_geometry_triangles_data,
+        };
+
+    VkAccelerationStructureGeometryKHR acceleration_structure_geometry = {
+        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+        .pNext = nullptr,
+        .geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
+        .geometry = acceleration_structure_geometry_data,
+        .flags = VK_GEOMETRY_OPAQUE_BIT_KHR,
+    };
+
+    VkAccelerationStructureBuildGeometryInfoKHR
+        acceleration_structure_build_geometry_info = {
+            .sType =
+                VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+            .pNext = nullptr,
+            .type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
+            .flags = 0,
+            .mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+            .srcAccelerationStructure = VK_NULL_HANDLE,
+            .dstAccelerationStructure = VK_NULL_HANDLE,
+            .geometryCount = 1,
+            .pGeometries = &acceleration_structure_geometry,
+            .ppGeometries = nullptr,
+            .scratchData = {},
+        };
+
+    VkAccelerationStructureBuildSizesInfoKHR
+        acceleration_structure_build_sizes_info = {
+            .sType =
+                VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR,
+            .pNext = nullptr,
+            .accelerationStructureSize = 0,
+            .updateScratchSize = 0,
+            .buildScratchSize = 0,
+        };
+
+    vkGetAccelerationStructureBuildSizesKHR(
+        this->logical_device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_HOST_KHR,
+        &acceleration_structure_build_geometry_info,
+        &acceleration_structure_build_geometry_info.geometryCount,
+        &acceleration_structure_build_sizes_info);
+
+    create_buffer(
+        this->logical_device, this->physical_device,
+        VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
+            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        acceleration_structure_build_sizes_info.accelerationStructureSize,
+        this->blas_buffer, &this->blas_buffer_memory);
+
+    VkBuffer p_scratchBuffer;
+    VkDeviceMemory p_scratchBufferMemory;
+    create_buffer(
+        this->logical_device, this->physical_device,
+        VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        acceleration_structure_build_sizes_info.buildScratchSize,
+        p_scratchBuffer, &p_scratchBufferMemory);
+
+    VkBufferDeviceAddressInfo scratch_buffer_device_address_info = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+        .buffer = p_scratchBuffer,
+    };
+
+    VkDeviceAddress scratch_buffer_address = vkGetBufferDeviceAddressKHR(
+        this->logical_device, &scratch_buffer_device_address_info);
+
+    VkDeviceOrHostAddressKHR scratch_device_or_host_address = {
+        .deviceAddress = scratch_buffer_address,
+    };
+
+    acceleration_structure_build_geometry_info.scratchData =
+        scratch_device_or_host_address;
+
+    VkAccelerationStructureCreateInfoKHR acceleration_structure_create_info = {
+        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
+        .pNext = nullptr,
+        .createFlags = 0,
+        .buffer = this->blas_buffer,
+        .offset = 0,
+        .size =
+            acceleration_structure_build_sizes_info.accelerationStructureSize,
+        .type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
+        .deviceAddress = 0,
+    };
+
+    vkCreateAccelerationStructureKHR(this->logical_device,
+                                     &acceleration_structure_create_info,
+                                     nullptr, &this->blas);
+
+    acceleration_structure_build_geometry_info.dstAccelerationStructure =
+        this->blas;
+
+    const VkAccelerationStructureBuildRangeInfoKHR*
+        p_acceleration_structure_build_range_info =
+            new (std::nothrow) VkAccelerationStructureBuildRangeInfoKHR{
+                .primitiveCount = 1,  // TODO: Number of faces.
+                .primitiveOffset = 0,
+                .firstVertex = 0,
+                .transformOffset = 0,
+            };
+    const VkAccelerationStructureBuildRangeInfoKHR**
+        p_acceleration_structure_build_range_infos =
+            &p_acceleration_structure_build_range_info;
+
+    VkCommandBufferAllocateInfo buffer_allocate_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool = this->cmd_pool,
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = 1,
+    };
+
+    VkCommandBuffer p_commandBuffer;
+    vkAllocateCommandBuffers(this->logical_device, &buffer_allocate_info,
+                             &p_commandBuffer);
+
+    VkCommandBufferBeginInfo command_buffer_begin_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+    };
+
+    vkBeginCommandBuffer(p_commandBuffer, &command_buffer_begin_info);
+    vkCmdBuildAccelerationStructuresKHR(
+        p_commandBuffer, 1, &acceleration_structure_build_geometry_info,
+        p_acceleration_structure_build_range_infos);
+    vkEndCommandBuffer(p_commandBuffer);
+
+    VkSubmitInfo submit_info = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &p_commandBuffer,
+    };
+
+    vkQueueSubmit(this->compute_queue, 1, &submit_info, nullptr);
+    vkQueueWaitIdle(this->compute_queue);
+
+    vkFreeCommandBuffers(this->logical_device, this->cmd_pool, 1,
+                         &p_commandBuffer);
+
+    vkDestroyBuffer(this->logical_device, p_scratchBuffer, nullptr);
+    vkFreeMemory(this->logical_device, p_scratchBufferMemory, nullptr);
+    delete p_acceleration_structure_build_range_info;
 }
 
 void App::create_tlas() {
@@ -509,6 +694,11 @@ void App::free() {
                  nullptr);
     vkDestroyBuffer(this->logical_device, this->index_buffer, nullptr);
     vkFreeMemory(this->logical_device, this->index_buffer_memory, nullptr);
+
+    vkDestroyAccelerationStructureKHR(this->logical_device, this->blas,
+                                      nullptr);
+    vkDestroyBuffer(this->logical_device, this->blas_buffer, nullptr);
+    vkFreeMemory(this->logical_device, this->blas_buffer_memory, nullptr);
 
     vkDestroyImageView(this->logical_device, this->storage_image.view, nullptr);
     vkDestroyImage(this->logical_device, this->storage_image.image, nullptr);
